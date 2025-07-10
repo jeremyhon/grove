@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { join } from "path";
 import { homedir } from "os";
+import { mkdir } from "node:fs/promises";
 import type { ProjectConfig, GlobalState, PackageManager } from "../types.js";
 
 const ProjectConfigSchema = z.object({
@@ -116,11 +117,7 @@ export class ConfigService {
 
 	static async ensureGlobalStateDir(): Promise<void> {
 		try {
-			// Create a temporary file to ensure the directory exists
-			const tempFile = join(ConfigService.GLOBAL_STATE_DIR, ".tmp");
-			await Bun.write(tempFile, "", { createPath: true });
-			// Remove the temporary file
-			await Bun.$`rm -f ${tempFile}`.quiet();
+			await mkdir(ConfigService.GLOBAL_STATE_DIR, { recursive: true });
 		} catch (error) {
 			throw new Error(`Failed to create global state directory: ${error}`);
 		}

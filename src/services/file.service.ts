@@ -1,5 +1,6 @@
 import { glob } from "glob";
 import { join, dirname, basename } from "path";
+import { mkdir, rm, stat } from "node:fs/promises";
 
 export class FileService {
 	static async copyFiles(patterns: string[], sourcePath: string, targetPath: string): Promise<void> {
@@ -34,7 +35,7 @@ export class FileService {
 
 			// Create target directory if it doesn't exist
 			const targetDir = dirname(target);
-			await Bun.write(targetDir, "", { createPath: true });
+			await mkdir(targetDir, { recursive: true });
 
 			// Copy the file
 			const content = await sourceFile.arrayBuffer();
@@ -68,7 +69,8 @@ export class FileService {
 
 	static async pathExists(path: string): Promise<boolean> {
 		try {
-			return await Bun.file(path).exists();
+			await stat(path);
+			return true;
 		} catch {
 			return false;
 		}
@@ -76,19 +78,16 @@ export class FileService {
 
 	static async isDirectory(path: string): Promise<boolean> {
 		try {
-			const file = Bun.file(path);
-			// If it's a directory, reading it as a file should fail
-			await file.text();
-			return false;
+			const stats = await stat(path);
+			return stats.isDirectory();
 		} catch {
-			// If reading as file fails, it might be a directory
-			return await FileService.pathExists(path);
+			return false;
 		}
 	}
 
 	static async createDirectory(path: string): Promise<void> {
 		try {
-			await Bun.write(path, "", { createPath: true });
+			await mkdir(path, { recursive: true });
 		} catch (error) {
 			throw new Error(`Failed to create directory ${path}: ${error}`);
 		}
@@ -96,7 +95,7 @@ export class FileService {
 
 	static async deleteDirectory(path: string): Promise<void> {
 		try {
-			await Bun.$`rm -rf ${path}`.quiet();
+			await rm(path, { recursive: true, force: true });
 		} catch (error) {
 			throw new Error(`Failed to delete directory ${path}: ${error}`);
 		}
@@ -124,7 +123,7 @@ export class FileService {
 	static async findProjectRoot(startPath: string = process.cwd()): Promise<string | null> {
 		let currentPath = startPath;
 		
-		while (currentPath !== "/") {
+		while (currentPath !== "/" && currentPath !== ".") {
 			const gitPath = join(currentPath, ".git");
 			const packageJsonPath = join(currentPath, "package.json");
 			
@@ -135,7 +134,11 @@ export class FileService {
 				return currentPath;
 			}
 			
-			currentPath = dirname(currentPath);
+			const parentPath = dirname(currentPath);
+			if (parentPath === currentPath) {
+				break; // Reached root
+			}
+			currentPath = parentPath;
 		}
 		
 		return null;

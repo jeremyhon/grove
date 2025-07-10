@@ -1,4 +1,5 @@
 import { ConfigService } from "./config.service.js";
+import { FileService } from "./file.service.js";
 import type { GlobalState } from "../types.js";
 
 export class PortService {
@@ -108,13 +109,9 @@ export class PortService {
 		const validPaths: Record<string, number> = {};
 		
 		for (const [path, port] of Object.entries(project.portAssignments)) {
-			try {
-				const exists = await Bun.file(path).exists();
-				if (exists) {
-					validPaths[path] = port;
-				}
-			} catch {
-				// Path doesn't exist, don't include it
+			const exists = await FileService.pathExists(path);
+			if (exists) {
+				validPaths[path] = port;
 			}
 		}
 
