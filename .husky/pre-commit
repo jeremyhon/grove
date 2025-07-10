@@ -1,0 +1,12 @@
+#!/bin/sh
+echo "🔍 Running pre-commit checks..."
+
+# Run lint and format with autofix
+echo "📝 Formatting and linting..."
+bunx biome check --write .
+
+# Run type checking
+echo "🔧 Type checking..."
+bunx tsc --noEmit
+
+echo "✅ Pre-commit checks passed!"
