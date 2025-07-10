@@ -1,4 +1,6 @@
-import { test, expect, mock, beforeEach } from "bun:test";
+import { test, expect, mock, beforeEach, afterEach } from "bun:test";
+import { mkdir, rm } from "node:fs/promises";
+import { join } from "path";
 import { initCommand } from "../src/commands/init.js";
 import { setupCommand } from "../src/commands/setup.js";
 import { listCommand } from "../src/commands/list.js";
@@ -7,39 +9,62 @@ import { deleteCommand } from "../src/commands/delete.js";
 
 // Mock console.log to capture output
 const mockConsoleLog = mock(() => {});
+const testDir = join(process.cwd(), "test-grove-commands");
 
-beforeEach(() => {
+beforeEach(async () => {
 	console.log = mockConsoleLog;
 	mockConsoleLog.mockClear();
+	
+	// Create test directory
+	await mkdir(testDir, { recursive: true });
+	process.chdir(testDir);
+	
+	// Initialize git repo
+	await Bun.$`git init --initial-branch=main`.quiet();
+	await Bun.$`git config user.name "Test User"`.quiet();
+	await Bun.$`git config user.email "test@example.com"`.quiet();
+	
+	// Create initial commit
+	await Bun.write("README.md", "# Test Project");
+	await Bun.$`git add .`.quiet();
+	await Bun.$`git commit -m "Initial commit"`.quiet();
 });
 
-test("initCommand - calls with options", async () => {
+afterEach(async () => {
+	process.chdir("/Users/jeremyhon/dev/grove");
+	await rm(testDir, { recursive: true, force: true });
+	await rm(join(process.env.HOME!, ".grove"), { recursive: true, force: true });
+});
+
+test("initCommand - initializes grove configuration", async () => {
 	const options = { verbose: true, dryRun: false };
 	
 	await initCommand(options);
 	
-	expect(mockConsoleLog).toHaveBeenCalledWith("Init command not implemented yet");
-	expect(mockConsoleLog).toHaveBeenCalledWith("Options:", options);
+	expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("Grove initialized"));
 });
 
-test("setupCommand - calls with feature and options", async () => {
+test("setupCommand - requires grove initialization", async () => {
 	const feature = "new-feature";
 	const options = { verbose: false, dryRun: true };
 	
-	await setupCommand(feature, options);
-	
-	expect(mockConsoleLog).toHaveBeenCalledWith("Setup command not implemented yet");
-	expect(mockConsoleLog).toHaveBeenCalledWith("Feature:", feature);
-	expect(mockConsoleLog).toHaveBeenCalledWith("Options:", options);
+	try {
+		await setupCommand(feature, options);
+		expect.unreachable();
+	} catch (error) {
+		expect((error as Error).message).toContain("Grove not initialized");
+	}
 });
 
-test("listCommand - calls with options including json flag", async () => {
+test("listCommand - requires grove initialization", async () => {
 	const options = { verbose: true, json: true };
 	
-	await listCommand(options);
-	
-	expect(mockConsoleLog).toHaveBeenCalledWith("List command not implemented yet");
-	expect(mockConsoleLog).toHaveBeenCalledWith("Options:", options);
+	try {
+		await listCommand(options);
+		expect.unreachable();
+	} catch (error) {
+		expect((error as Error).message).toContain("Grove not initialized");
+	}
 });
 
 test("mergeCommand - calls with options including hooks flag", async () => {
@@ -62,15 +87,18 @@ test("deleteCommand - calls with path and options including force flag", async (
 	expect(mockConsoleLog).toHaveBeenCalledWith("Options:", options);
 });
 
-test("commands handle empty options", async () => {
-	const emptyOptions = {};
+test("full workflow - init, setup, list", async () => {
+	// Initialize grove
+	await initCommand({ verbose: false });
+	expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("Grove initialized"));
 	
-	await initCommand(emptyOptions);
-	await setupCommand("test-feature", emptyOptions);
-	await listCommand(emptyOptions);
-	await mergeCommand(emptyOptions);
-	await deleteCommand("/test/path", emptyOptions);
+	// Setup feature
+	mockConsoleLog.mockClear();
+	await setupCommand("test-feature", { verbose: false });
+	expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("test-grove-commands-test-feature"));
 	
-	// Should not throw and should call console.log multiple times
-	expect(mockConsoleLog).toHaveBeenCalled();
+	// List worktrees
+	mockConsoleLog.mockClear();
+	await listCommand({ verbose: false, json: true });
+	expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("test-feature"));
 });
