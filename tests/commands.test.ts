@@ -34,6 +34,11 @@ afterEach(async () => {
 	process.chdir("/Users/jeremyhon/dev/grove");
 	await rm(testDir, { recursive: true, force: true });
 	await rm(join(process.env.HOME!, ".grove"), { recursive: true, force: true });
+	
+	// Clean up any sibling directories created by setup command
+	// Pattern: test-grove-commands-*
+	const parentDir = join(process.cwd(), "test-grove-commands-test-feature");
+	await rm(parentDir, { recursive: true, force: true });
 });
 
 test("initCommand - initializes grove configuration", async () => {
