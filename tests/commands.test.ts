@@ -72,24 +72,27 @@ test("listCommand - requires grove initialization", async () => {
 	}
 });
 
-test("mergeCommand - calls with options including hooks flag", async () => {
+test("mergeCommand - cannot merge from main branch", async () => {
 	const options = { verbose: false, hooks: false };
 	
-	await mergeCommand(options);
-	
-	expect(mockConsoleLog).toHaveBeenCalledWith("Merge command not implemented yet");
-	expect(mockConsoleLog).toHaveBeenCalledWith("Options:", options);
+	try {
+		await mergeCommand(options);
+		expect.unreachable();
+	} catch (error) {
+		expect((error as Error).message).toContain("Cannot merge from main branch");
+	}
 });
 
-test("deleteCommand - calls with path and options including force flag", async () => {
+test("deleteCommand - validates path exists", async () => {
 	const path = "/test/worktree/path";
 	const options = { verbose: true, force: true };
 	
-	await deleteCommand(path, options);
-	
-	expect(mockConsoleLog).toHaveBeenCalledWith("Delete command not implemented yet");
-	expect(mockConsoleLog).toHaveBeenCalledWith("Path:", path);
-	expect(mockConsoleLog).toHaveBeenCalledWith("Options:", options);
+	try {
+		await deleteCommand(path, options);
+		expect.unreachable();
+	} catch (error) {
+		expect((error as Error).message).toContain("Path does not exist");
+	}
 });
 
 test("full workflow - init, setup, list", async () => {
