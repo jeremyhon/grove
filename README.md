@@ -99,7 +99,7 @@ We will separate **user-defined configuration** from **machine-managed state**.
 
 ## Implementation Progress
 
-**Current Status:** Phase 1 Complete ✅ | Phase 2 Ready to Begin 🚀
+**Current Status:** Phase 2 Complete ✅ | Phase 3 Ready to Begin 🚀
 
 ## Implementation Plan
 
@@ -143,25 +143,38 @@ We will separate **user-defined configuration** from **machine-managed state**.
 - [x] Test coverage for ConfigService, GitService, PortService, FileService, and CLI commands.
 - [x] Automated pre-commit hooks for linting, formatting, and type checking.
 
-### Phase 2: Core Command Implementation
+### Phase 2: Core Command Implementation ✅ **COMPLETED**
 
-#### 2.1. `grove init`
+#### 2.1. `grove init` ✅
 
-- [ ] Generate a default `.grove-config.json` with a unique `projectId`.
-- [ ] Add a corresponding entry for the `projectId` in the global `~/.grove/state.json`.
-- [ ] Auto-detect `packageManager` by looking for lockfiles.
+- [x] Generate a default `.grove-config.json` with a unique `projectId`.
+- [x] Add a corresponding entry for the `projectId` in the global `~/.grove/state.json`.
+- [x] Auto-detect `packageManager` by looking for lockfiles.
+- [x] Validate git repository and prevent double initialization.
+- [x] Support verbose output for detailed initialization info.
 
-#### 2.2. `grove setup`
+#### 2.2. `grove setup` ✅
 
-- [ ] Sanitize the feature name into a git-friendly branch name.
-- [ ] Orchestrate the setup flow using the core services: create worktree, assign port, copy files, run hooks.
-- [ ] Output only the target directory path to `stdout` for `cd $(...)` compatibility.
+- [x] Sanitize the feature name into a git-friendly branch name.
+- [x] Orchestrate the setup flow using the core services: create worktree, assign port, copy files, run hooks.
+- [x] Output only the target directory path to `stdout` for `cd $(...)` compatibility.
+- [x] Comprehensive error handling and cleanup on failure.
+- [x] Auto-assign next available port from base port.
 
-#### 2.3. `grove list`
+#### 2.3. `grove list` ✅
 
-- [ ] Fetch data from `GitService` and `PortService`.
-- [ ] Format the data into a clean table using `cli-table3`.
-- [ ] Support a `--json` flag for scriptable output.
+- [x] Fetch data from `GitService` and `PortService`.
+- [x] Format the data into a clean table using `cli-table3`.
+- [x] Support a `--json` flag for scriptable output.
+- [x] Display path, branch, port, status (main/feature), and commit info.
+- [x] Show relative paths for better readability.
+
+#### 2.4. Testing & Quality Assurance ✅
+
+- [x] All 61 tests passing with 0 failures.
+- [x] Full integration test covering complete workflow: `init` → `setup` → `list`.
+- [x] TypeScript error handling and proper type safety.
+- [x] Clean, atomic commits with conventional commit format.
 
 ### Phase 3: Advanced Features & Polish
 

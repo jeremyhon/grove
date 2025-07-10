@@ -100,7 +100,12 @@ src/
 │   └── file.service.ts
 ├── utils/                # Helper functions
 └── types.ts              # TypeScript types
+tests/                    # Test files (separate from src/)
 ```
+
+## Project Structure
+
+Grove uses separate `src/` and `tests/` directories for optimal CLI tool distribution.
 
 ## Configuration Files
 
@@ -110,3 +115,100 @@ src/
 ## Build & Distribution
 
 Use `bun build ./src/index.ts --compile --outfile grove` to create a single binary.
+
+## Current Functionality
+
+Grove currently implements the core commands for git worktree management:
+
+### Available Commands
+
+#### `grove init`
+Initializes Grove configuration for a git project:
+- Generates unique project ID (`proj_xxxxxxxx`)
+- Auto-detects package manager from lockfiles (bun, yarn, pnpm, npm)
+- Creates `.grove-config.json` with sensible defaults
+- Initializes global state in `~/.grove/state.json`
+- Validates git repository and prevents double initialization
+
+```bash
+grove init [--verbose]
+```
+
+#### `grove setup <feature>`
+Creates a new worktree for feature development:
+- Sanitizes feature name to git-safe branch name
+- Creates worktree in `../project-feature` directory
+- Auto-assigns next available port (starting from base port)
+- Copies specified files (`.env*`, `.vscode/`) to new worktree
+- Runs post-setup hooks (e.g., `bun install`)
+- Outputs target path for shell integration: `cd $(grove setup feature)`
+
+```bash
+grove setup "new feature" [--verbose]
+cd $(grove setup "new feature")  # Shell integration
+```
+
+#### `grove list`
+Lists all worktrees with comprehensive information:
+- Shows path, branch, port, status (main/feature), and commit hash
+- Supports `--json` flag for scriptable output
+- Clean table format with colored output
+- Relative path display for readability
+
+```bash
+grove list [--verbose] [--json]
+```
+
+### Configuration
+
+**Project Config (`.grove-config.json`):**
+```json
+{
+  "projectId": "proj_fi0a42hf",
+  "project": "grove",
+  "basePort": 3000,
+  "packageManager": "bun",
+  "copyFiles": [".env*", ".vscode/"],
+  "hooks": {
+    "postSetup": "bun install"
+  }
+}
+```
+
+**Global State (`~/.grove/state.json`):**
+```json
+{
+  "projects": {
+    "proj_fi0a42hf": {
+      "basePath": "/Users/user/dev/grove",
+      "portAssignments": {
+        "/Users/user/dev/grove": 3000,
+        "/Users/user/dev/grove-feature": 3001
+      }
+    }
+  }
+}
+```
+
+### Example Workflow
+
+```bash
+# Initialize grove in a git project
+grove init
+
+# Create a new feature worktree
+cd $(grove setup "user authentication")
+
+# List all worktrees
+grove list
+
+# Development work happens in the feature worktree...
+# (merge and delete commands coming in Phase 3)
+```
+
+### Testing Status
+
+- **61 passing tests** with 0 failures
+- Complete test coverage for all services and commands
+- Integration tests for full workflow
+- TypeScript type safety validation
