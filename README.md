@@ -99,7 +99,7 @@ We will separate **user-defined configuration** from **machine-managed state**.
 
 ## Implementation Progress
 
-**Current Status:** Phase 2 Complete ✅ | Phase 3 Ready to Begin 🚀
+**Current Status:** Phase 3 Complete ✅ | Phase 4 Ready to Begin 🚀
 
 ## Implementation Plan
 
@@ -176,25 +176,35 @@ We will separate **user-defined configuration** from **machine-managed state**.
 - [x] TypeScript error handling and proper type safety.
 - [x] Clean, atomic commits with conventional commit format.
 
-### Phase 3: Advanced Features & Polish
+### Phase 3: Advanced Features & Polish ✅ **COMPLETED**
 
-#### 3.1. `grove merge`
+#### 3.1. `grove merge` ✅
 
-- [ ] Validate the current directory is a worktree.
-- [ ] Run `preMerge` hooks (e.g., `bun test`).
-- [ ] Orchestrate the merge flow: switch to base, pull latest, merge branch, delete worktree, release port.
-- [ ] Run `postMerge` hooks.
+- [x] Validate the current directory is a worktree.
+- [x] Run `preMerge` hooks (e.g., `bun test`).
+- [x] Orchestrate the merge flow: switch to base, pull latest, merge branch, delete worktree, release port.
+- [x] Run `postMerge` hooks.
+- [x] Shell integration support: `cd $(grove merge)`.
 
-#### 3.2. `grove delete`
+#### 3.2. `grove delete` ✅
 
-- [ ] Use `prompts` to ask for user confirmation.
-- [ ] Check for uncommitted changes and warn the user.
-- [ ] Safely run hooks, remove the worktree, and release its associated port.
+- [x] Use `prompts` to ask for user confirmation.
+- [x] Check for uncommitted changes and warn the user.
+- [x] Safely run hooks, remove the worktree, and release its associated port.
+- [x] Force deletion option with `--force` flag.
 
-#### 3.3. Hook System
+#### 3.3. Hook System ✅
 
-- [ ] Create a `HookService` to execute user-defined shell commands from the config using `Bun.$`.
-- [ ] Pass contextual info to hooks via environment variables (`GROVE_BRANCH`, `GROVE_PORT`, etc.).
+- [x] Create a `HookService` to execute user-defined shell commands from the config using `Bun.$`.
+- [x] Pass contextual info to hooks via environment variables (`GROVE_BRANCH`, `GROVE_PORT`, etc.).
+- [x] Support all hook types: `preMerge`, `postMerge`, `preDelete`, `postDelete`.
+
+#### 3.4. Testing & Quality Assurance ✅
+
+- [x] All 61 tests passing with comprehensive coverage.
+- [x] Updated test suite to validate Phase 3 implementations.
+- [x] Maintained type safety and code quality standards.
+- [x] Clean atomic commits following conventional commit format.
 
 ### Phase 4: Distribution and Final Touches
 

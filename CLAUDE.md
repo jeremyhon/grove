@@ -79,7 +79,8 @@ test("service functionality", () => {
 - GitService: Git operations, worktree management  
 - PortService: Port assignment, cleanup, state management
 - FileService: File operations, directory management
-- Commands: CLI command validation
+- HookService: User-defined shell command execution
+- Commands: CLI command validation (init, setup, list, merge, delete)
 - Types: TypeScript interface validation
 
 ## Architecture
@@ -97,7 +98,8 @@ src/
 │   ├── config.service.ts
 │   ├── git.service.ts
 │   ├── port.service.ts
-│   └── file.service.ts
+│   ├── file.service.ts
+│   └── hook.service.ts
 ├── utils/                # Helper functions
 └── types.ts              # TypeScript types
 tests/                    # Test files (separate from src/)
@@ -159,6 +161,48 @@ Lists all worktrees with comprehensive information:
 grove list [--verbose] [--json]
 ```
 
+#### `grove merge`
+Merges the current feature branch back to main and cleans up the worktree:
+- Validates current directory is a worktree (not main branch)
+- Checks for uncommitted changes before proceeding
+- Runs `preMerge` hooks (e.g., tests, linting)
+- Orchestrates merge flow: switch to main → pull latest → merge → cleanup
+- Runs `postMerge` hooks after successful merge
+- Outputs main worktree path for shell integration: `cd $(grove merge)`
+
+```bash
+grove merge [--verbose] [--no-hooks]
+cd $(grove merge)  # Shell integration
+```
+
+#### `grove delete <path>`
+Deletes a worktree and releases its assigned port:
+- Validates target path exists and is a git repository
+- Prevents deletion of main worktree
+- Warns about uncommitted changes
+- Interactive confirmation prompt (unless `--force` flag used)
+- Runs `preDelete` and `postDelete` hooks
+- Safely removes worktree and releases port assignment
+
+```bash
+grove delete ../project-feature [--force] [--verbose]
+```
+
+### Hook System
+
+Grove supports user-defined hooks that execute at specific points in the workflow:
+
+- **`postSetup`**: Runs after creating a new worktree (e.g., `bun install`)
+- **`preMerge`**: Runs before merging (e.g., `bun test`)
+- **`postMerge`**: Runs after successful merge (e.g., deployment)
+- **`preDelete`**: Runs before deleting worktree (e.g., cleanup)
+- **`postDelete`**: Runs after deleting worktree (e.g., notifications)
+
+Hooks receive contextual environment variables:
+- `GROVE_PROJECT_ID`, `GROVE_PROJECT_NAME`, `GROVE_BASE_PORT`
+- `GROVE_PACKAGE_MANAGER`, `GROVE_PROJECT_PATH`
+- `GROVE_BRANCH`, `GROVE_PORT`, `GROVE_WORKTREE_PATH` (when applicable)
+
 ### Configuration
 
 **Project Config (`.grove-config.json`):**
@@ -170,7 +214,11 @@ grove list [--verbose] [--json]
   "packageManager": "bun",
   "copyFiles": [".env*", ".vscode/"],
   "hooks": {
-    "postSetup": "bun install"
+    "postSetup": "bun install",
+    "preMerge": "bun test",
+    "postMerge": "echo 'Merge completed'",
+    "preDelete": "echo 'Cleaning up...'",
+    "postDelete": "echo 'Worktree deleted'"
   }
 }
 ```
@@ -203,7 +251,13 @@ cd $(grove setup "user authentication")
 grove list
 
 # Development work happens in the feature worktree...
-# (merge and delete commands coming in Phase 3)
+git add . && git commit -m "implement feature"
+
+# Merge back to main and cleanup
+cd $(grove merge)
+
+# Or delete without merging
+grove delete ../grove-user-authentication
 ```
 
 ### Testing Status
