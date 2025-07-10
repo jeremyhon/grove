@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { Command } from "commander";
+import packageJson from "../package.json";
 import type { CommandOptions } from "./types.js";
 
 const program = new Command();
@@ -8,7 +9,7 @@ const program = new Command();
 program
 	.name("grove")
 	.description("Git worktree manager with automatic port assignment")
-	.version("0.1.0")
+	.version(packageJson.version)
 	.option("-v, --verbose", "enable verbose logging")
 	.option("--dry-run", "show what would be done without executing");
 
