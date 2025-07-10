@@ -29,8 +29,17 @@ This is a CLI tool built with Bun that simplifies git worktree management with a
 ## Bun APIs for Grove
 
 - Prefer `Bun.file()` and `Bun.write()` for file I/O operations
-- Use `Bun.$` for executing shell commands (git operations)
+- Use Node.js `fs/promises` APIs for directory operations: `mkdir()`, `rm()`, `stat()`
+- Use `Bun.$` for git operations only (avoid for file system operations)
 - Use `Bun.build()` with `--compile` flag for binary distribution
+
+## File System Best Practices
+
+- **Directory operations**: Use `mkdir(path, { recursive: true })` instead of `Bun.$`mkdir -p``
+- **File deletion**: Use `rm(path, { recursive: true, force: true })` instead of `Bun.$`rm -rf``
+- **File existence**: Use `stat(path)` or `FileService.pathExists()` instead of shell tests
+- **Directory detection**: Use `stat(path).isDirectory()` instead of `test -d`
+- **Only use `Bun.$`** for git commands that require shell interaction
 
 ## Key Dependencies
 
@@ -44,15 +53,34 @@ This is a CLI tool built with Bun that simplifies git worktree management with a
 
 ## Testing
 
-Use `bun test` to run tests:
+Use `bun test` to run tests. Grove has comprehensive test coverage:
 
 ```ts
-import { test, expect } from "bun:test";
+import { test, expect, beforeEach, afterEach } from "bun:test";
+import { mkdir, rm } from "node:fs/promises";
 
-test("config service", () => {
-  // Test configuration loading
+beforeEach(async () => {
+  // Use Node.js fs APIs for test setup
+  await mkdir(testDir, { recursive: true });
+});
+
+afterEach(async () => {
+  // Clean up with Node.js fs APIs
+  await rm(testDir, { recursive: true, force: true });
+});
+
+test("service functionality", () => {
+  // Test implementation
 });
 ```
+
+**Test Coverage:**
+- ConfigService: Config file handling, validation, global state
+- GitService: Git operations, worktree management  
+- PortService: Port assignment, cleanup, state management
+- FileService: File operations, directory management
+- Commands: CLI command validation
+- Types: TypeScript interface validation
 
 ## Architecture
 
