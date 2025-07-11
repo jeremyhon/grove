@@ -58,4 +58,12 @@ program
 		await deleteCommand(path, options);
 	});
 
+program
+	.command("shell-setup")
+	.description("Generate shell integration for automatic directory changing")
+	.action(async (options: CommandOptions) => {
+		const { shellSetupCommand } = await import("./commands/shell-setup.js");
+		await shellSetupCommand(options);
+	});
+
 program.parse();
