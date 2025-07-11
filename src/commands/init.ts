@@ -32,6 +32,7 @@ export async function initCommand(options: CommandOptions): Promise<void> {
 		copyFiles: [".env*", ".vscode/"],
 		hooks: {
 			postSetup: packageManager === "bun" ? "bun install" : `${packageManager} install`,
+			postMerge: "echo 'Merge completed successfully'",
 		},
 	};
 	
