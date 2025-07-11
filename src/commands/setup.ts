@@ -3,6 +3,7 @@ import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
 import { PortService } from "../services/port.service.js";
 import { FileService } from "../services/file.service.js";
+import { HookService } from "../services/hook.service.js";
 import type { CommandOptions } from "../types.js";
 
 export async function setupCommand(feature: string, options: CommandOptions): Promise<void> {
@@ -46,19 +47,12 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 		}
 		
 		// Run post-setup hook
-		if (config.hooks.postSetup) {
-			if (options.verbose) {
-				console.log(`Running post-setup hook: ${config.hooks.postSetup}`);
-			}
-			
-			try {
-				await Bun.$`cd ${targetPath} && ${config.hooks.postSetup}`.quiet();
-			} catch (error) {
-				if (options.verbose) {
-					console.warn(`Post-setup hook failed: ${error}`);
-				}
-			}
-		}
+		await HookService.runHook("postSetup", config, {
+			projectPath,
+			branch: branchName,
+			port,
+			worktreePath: targetPath,
+		});
 		
 		// Clean up orphaned ports
 		await PortService.cleanupOrphanedPorts(config.projectId);
