@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "bun --hot src/index.ts",
     "build": "bun build src/index.ts --compile --outfile grove",
+    "install": "bun run build && cp ./grove ~/.local/bin/grove && grove shell-setup",
     "check": "bunx biome check .",
     "format": "bunx biome format --write .",
     "lint": "bunx biome lint .",
