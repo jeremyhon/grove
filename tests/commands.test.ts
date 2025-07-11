@@ -83,6 +83,49 @@ test("mergeCommand - cannot merge from main branch", async () => {
 	}
 });
 
+test("mergeCommand - runs postMerge hook when enabled", async () => {
+	// Mock HookService early to prevent postSetup hook from failing
+	const { HookService } = await import("../src/services/hook.service.js");
+	const originalRunHook = HookService.runHook;
+	let hookCalled = false;
+	let hookName = "";
+	
+	HookService.runHook = mock(async (name, config, context) => {
+		if (name === "postMerge") {
+			hookCalled = true;
+			hookName = name;
+		}
+		return Promise.resolve();
+	});
+	
+	try {
+		// Initialize grove
+		await initCommand({ verbose: false });
+		
+		// Create a feature worktree
+		await setupCommand("test-feature", { verbose: false });
+		
+		// Move to feature worktree
+		const featurePath = join(testDir, "../test-grove-commands-test-feature");
+		process.chdir(featurePath);
+		
+		// Make a commit in the feature branch
+		await Bun.write("feature.txt", "Feature file");
+		await Bun.$`git add .`.quiet();
+		await Bun.$`git commit -m "Add feature"`.quiet();
+		
+		// Run merge command (this should succeed and call postMerge hook)
+		await mergeCommand({ verbose: false, hooks: true });
+		
+		// Verify the hook was called
+		expect(hookCalled).toBe(true);
+		expect(hookName).toBe("postMerge");
+	} finally {
+		// Restore original method
+		HookService.runHook = originalRunHook;
+	}
+});
+
 test("deleteCommand - validates path exists", async () => {
 	const path = "/test/worktree/path";
 	const options = { verbose: true, force: true };
@@ -96,17 +139,27 @@ test("deleteCommand - validates path exists", async () => {
 });
 
 test("full workflow - init, setup, list", async () => {
-	// Initialize grove
-	await initCommand({ verbose: false });
-	expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("Grove initialized"));
+	// Mock HookService to prevent postSetup hook from failing
+	const { HookService } = await import("../src/services/hook.service.js");
+	const originalRunHook = HookService.runHook;
+	HookService.runHook = mock(async () => Promise.resolve());
 	
-	// Setup feature
-	mockConsoleLog.mockClear();
-	await setupCommand("test-feature", { verbose: false });
-	expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("test-grove-commands-test-feature"));
-	
-	// List worktrees
-	mockConsoleLog.mockClear();
-	await listCommand({ verbose: false, json: true });
-	expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("test-feature"));
+	try {
+		// Initialize grove
+		await initCommand({ verbose: false });
+		expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("Grove initialized"));
+		
+		// Setup feature
+		mockConsoleLog.mockClear();
+		await setupCommand("test-feature", { verbose: false });
+		expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("test-grove-commands-test-feature"));
+		
+		// List worktrees
+		mockConsoleLog.mockClear();
+		await listCommand({ verbose: false, json: true });
+		expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("test-feature"));
+	} finally {
+		// Restore original method
+		HookService.runHook = originalRunHook;
+	}
 });
