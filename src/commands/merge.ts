@@ -61,9 +61,6 @@ export async function mergeCommand(options: CommandOptions & { hooks?: boolean }
 		// Switch to main branch in main worktree
 		await GitService.switchToMainBranch(mainWorktree.path);
 
-		// Pull latest changes
-		await GitService.pullLatest(mainWorktree.path);
-
 		// Merge the feature branch
 		await GitService.mergeBranch(currentBranch, mainWorktree.path);
 
