@@ -210,9 +210,14 @@ We will separate **user-defined configuration** from **machine-managed state**.
 
 #### 4.1. Build & Installation
 
-- [ ] Configure a `build` script in `package.json`: `bun build ./src/index.ts --compile --outfile grove`.
-- [ ] Create a release script to generate binaries for all target platforms.
-- [ ] Finalize `scripts/install.sh` to download and install the correct binary from GitHub Releases.
+- [x] Configure a `build` script in `package.json`: `bun run build`
+- [x] Configure an `install` script in `package.json`: `bun run install` (builds and installs Grove to PATH)
+- [ ] Create a release script to generate binaries for all target platforms
+- [x] Create `scripts/install.sh` for global Grove setup
+
+**Note:** 
+- `bun install` - installs npm package dependencies
+- `bun run install` - builds Grove and installs it to your system PATH
 
 #### 4.2. Shell Completion
 

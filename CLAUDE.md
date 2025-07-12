@@ -116,7 +116,9 @@ Grove uses separate `src/` and `tests/` directories for optimal CLI tool distrib
 
 ## Build & Distribution
 
-Use `bun build ./src/index.ts --compile --outfile grove` to create a single binary.
+- **Build Grove:** `bun run build` - builds Grove into a single binary
+- **Install Grove to PATH:** `bun run install` - builds Grove and installs it to your system PATH
+- **Install Dependencies:** `bun install` - installs npm package dependencies (different from `bun run install`)
 
 ## Current Functionality
 
