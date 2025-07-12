@@ -36,8 +36,10 @@ grove/
 │   │   ├── config.service.ts
 │   │   ├── git.service.ts
 │   │   ├── port.service.ts
-│   │   └── file.service.ts
-│   ├── utils/                # Reusable helper functions (logger, etc.)
+│   │   ├── file.service.ts
+│   │   ├── hook.service.ts
+│   │   └── log.service.ts
+│   ├── utils/                # Reusable helper functions
 │   └── types.ts              # Core TypeScript types and interfaces
 ├── tests/                    # Tests using `bun:test`
 ├── package.json              # Project manifest
@@ -99,7 +101,7 @@ We will separate **user-defined configuration** from **machine-managed state**.
 
 ## Implementation Progress
 
-**Current Status:** Phase 3 Complete ✅ | Phase 4 Ready to Begin 🚀
+**Current Status:** Phase 3 Complete ✅ | Phase 4 In Progress 🚧
 
 ## Implementation Plan
 
@@ -199,7 +201,15 @@ We will separate **user-defined configuration** from **machine-managed state**.
 - [x] Pass contextual info to hooks via environment variables (`GROVE_BRANCH`, `GROVE_PORT`, etc.).
 - [x] Support all hook types: `preMerge`, `postMerge`, `preDelete`, `postDelete`.
 
-#### 3.4. Testing & Quality Assurance ✅
+#### 3.4. Logging System ✅
+
+- [x] Implement structured logging with `LogService` for organized output.
+- [x] Clean API: `log()`, `log.verbose()`, `log.success()`, `log.error()`, `log.spinner()`.
+- [x] Stream management: stderr for user feedback, stdout for shell integration.
+- [x] Progress indicators with ora spinners for long-running operations.
+- [x] Colored output with contextual icons for better visual hierarchy.
+
+#### 3.5. Testing & Quality Assurance ✅
 
 - [x] All 61 tests passing with comprehensive coverage.
 - [x] Updated test suite to validate Phase 3 implementations.
@@ -230,7 +240,7 @@ We will separate **user-defined configuration** from **machine-managed state**.
 - [x] Write unit tests for all services using `bun:test`. Use `bun:test`'s built-in mocking.
 - [x] Write integration tests that execute the compiled binary against a mock git repository.
 - [x] Achieve comprehensive test coverage with 61 passing tests.
-- [x] Test all core services: ConfigService, GitService, PortService, FileService.
+- [x] Test all core services: ConfigService, GitService, PortService, FileService, HookService, LogService.
 - [x] Validate TypeScript interfaces and CLI command structure.
 
 #### 4.4. Documentation

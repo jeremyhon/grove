@@ -80,6 +80,7 @@ test("service functionality", () => {
 - PortService: Port assignment, cleanup, state management
 - FileService: File operations, directory management
 - HookService: User-defined shell command execution
+- LogService: Structured logging with progress indicators
 - Commands: CLI command validation (init, setup, list, merge, delete)
 - Types: TypeScript interface validation
 
@@ -99,7 +100,8 @@ src/
 │   ├── git.service.ts
 │   ├── port.service.ts
 │   ├── file.service.ts
-│   └── hook.service.ts
+│   ├── hook.service.ts
+│   └── log.service.ts
 ├── utils/                # Helper functions
 └── types.ts              # TypeScript types
 tests/                    # Test files (separate from src/)
@@ -260,6 +262,40 @@ cd $(grove merge)
 
 # Or delete without merging
 grove delete ../grove-user-authentication
+```
+
+### Logging System
+
+Grove uses a structured logging system that provides clean, organized output with optional verbose details:
+
+**Core Logging API:**
+- `log()` - Basic messages to stderr
+- `log.verbose()` - Detailed logs only shown with `--verbose` flag
+- `log.success()` - Success messages with ✅ icons
+- `log.error()` - Error messages with ❌ icons
+- `log.warn()` - Warning messages with ⚠️ icons
+- `log.spinner()` - Progress indicators for long operations
+- `log.stdout()` - Clean output to stdout for shell integration
+
+**Stream Management:**
+- All user feedback goes to **stderr** to keep stdout clean
+- Shell integration paths (for `cd $(grove command)`) go to **stdout**
+- Progress spinners for git operations, file copying, and hook execution
+- Colored output with contextual icons for better visual hierarchy
+
+**Usage Examples:**
+```bash
+# Normal mode - minimal essential feedback
+grove setup "new feature"
+# Output: /path/to/worktree (clean for shell integration)
+
+# Verbose mode - detailed operation logs and progress
+grove setup "new feature" --verbose
+# Shows: Creating worktree spinner → Hook execution spinner → Success
+
+# Shell integration works seamlessly
+cd $(grove setup "feature")  # Changes to new worktree
+cd $(grove merge)            # Returns to main after merge
 ```
 
 ### Testing Status
