@@ -2,6 +2,7 @@ import { basename } from "path";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
 import { createLogService } from "../services/log.service.js";
+import { UserError } from "../errors/index.js";
 import type { CommandOptions, ProjectConfig } from "../types.js";
 
 export async function initCommand(options: CommandOptions): Promise<void> {
@@ -10,7 +11,7 @@ export async function initCommand(options: CommandOptions): Promise<void> {
 	
 	// Check if this is a git repository
 	if (!(await GitService.isGitRepository(projectPath))) {
-		throw new Error("Current directory is not a git repository. Run 'git init' first.");
+		throw UserError.notGitRepository();
 	}
 	
 	// Check if grove is already initialized

@@ -4,6 +4,7 @@ import { GitService } from "../services/git.service.js";
 import { FileService } from "../services/file.service.js";
 import { HookService } from "../services/hook.service.js";
 import { createLogService } from "../services/log.service.js";
+import { UserError } from "../errors/index.js";
 import type { CommandOptions } from "../types.js";
 
 export async function setupCommand(feature: string, options: CommandOptions): Promise<void> {
@@ -12,7 +13,7 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 	
 	// Check if this is a git repository
 	if (!(await GitService.isGitRepository(projectPath))) {
-		throw new Error("Current directory is not a git repository.");
+		throw UserError.notGitRepository();
 	}
 
 	const repoRoot = await GitService.getRepoRoot(projectPath);
@@ -23,7 +24,7 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 	// Check if grove is initialized
 	const config = await ConfigService.readProjectConfig(configPath);
 	if (!config) {
-		throw new Error("Grove not initialized. Run 'grove init' first.");
+		throw UserError.notInitialized();
 	}
 	
 	// Sanitize feature name for git branch

@@ -3,8 +3,24 @@
 import { Command } from "commander";
 import packageJson from "../package.json";
 import type { CommandOptions } from "./types.js";
+import { createErrorHandler } from "./errors/index.js";
+import { createLogService } from "./services/log.service.js";
 
 const program = new Command();
+
+/**
+ * Wraps command execution with error handling
+ */
+async function executeCommand(command: () => Promise<void>, options: CommandOptions): Promise<void> {
+	const log = createLogService({ verbose: options.verbose ?? false });
+	const errorHandler = createErrorHandler({ log, verbose: options.verbose ?? false });
+	
+	try {
+		await command();
+	} catch (error) {
+		errorHandler.handle(error);
+	}
+}
 
 program
 	.name("grove")
@@ -17,8 +33,10 @@ program
 	.alias("i")
 	.description("Initialize Grove configuration for this project")
 	.action(async (options: CommandOptions) => {
-		const { initCommand } = await import("./commands/init.js");
-		await initCommand(options);
+		await executeCommand(async () => {
+			const { initCommand } = await import("./commands/init.js");
+			await initCommand(options);
+		}, options);
 	});
 
 program
@@ -27,8 +45,10 @@ program
 	.description("Set up a new worktree for a feature branch")
 	.argument("<feature>", "feature or branch name")
 	.action(async (feature: string, options: CommandOptions) => {
-		const { setupCommand } = await import("./commands/setup.js");
-		await setupCommand(feature, options);
+		await executeCommand(async () => {
+			const { setupCommand } = await import("./commands/setup.js");
+			await setupCommand(feature, options);
+		}, options);
 	});
 
 program
@@ -48,8 +68,10 @@ program
 	.description("List all worktrees and their status")
 	.option("--json", "output as JSON")
 	.action(async (options: CommandOptions & { json?: boolean }) => {
-		const { listCommand } = await import("./commands/list.js");
-		await listCommand(options);
+		await executeCommand(async () => {
+			const { listCommand } = await import("./commands/list.js");
+			await listCommand(options);
+		}, options);
 	});
 
 program
@@ -59,8 +81,10 @@ program
 	.argument("[path]", "path to worktree to delete (defaults to current worktree)")
 	.option("-f, --force", "force deletion without confirmation")
 	.action(async (path: string | undefined, options: CommandOptions & { force?: boolean }) => {
-		const { deleteCommand } = await import("./commands/delete.js");
-		await deleteCommand(path, options);
+		await executeCommand(async () => {
+			const { deleteCommand } = await import("./commands/delete.js");
+			await deleteCommand(path, options);
+		}, options);
 	});
 
 program
@@ -88,8 +112,10 @@ program
 	.alias("ss")
 	.description("Generate shell integration for automatic directory changing")
 	.action(async (options: CommandOptions) => {
-		const { shellSetupCommand } = await import("./commands/shell-setup.js");
-		await shellSetupCommand(options);
+		await executeCommand(async () => {
+			const { shellSetupCommand } = await import("./commands/shell-setup.js");
+			await shellSetupCommand(options);
+		}, options);
 	});
 
 program

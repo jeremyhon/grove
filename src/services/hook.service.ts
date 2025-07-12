@@ -60,7 +60,8 @@ export class HookService {
 			log?.verbose(`Hook '${hookName}' completed successfully`);
 		} catch (error) {
 			spinner?.fail();
-			throw new Error(`Failed to run hook '${hookName}': ${error}`);
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			throw new Error(`Failed to run hook '${hookName}': ${errorMessage}`);
 		}
 	}
 }

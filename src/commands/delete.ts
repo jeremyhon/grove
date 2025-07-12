@@ -5,6 +5,7 @@ import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
 import { FileService } from "../services/file.service.js";
 import { createLogService } from "../services/log.service.js";
+import { UserError, SystemError } from "../errors/index.js";
 import type { CommandOptions } from "../types.js";
 
 export async function deleteCommand(path: string | undefined, options: CommandOptions & { force?: boolean }): Promise<void> {
@@ -17,7 +18,7 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 
 		if (!path) {
 			if (!(await GitService.isGitRepository(projectPath))) {
-				throw new Error("Current directory is not a git repository.");
+				throw UserError.notGitRepository();
 			}
 			targetPath = await GitService.getRepoRoot(projectPath);
 		} else {
@@ -26,12 +27,12 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 
 			if (await FileService.pathExists(resolvedPath)) {
 				if (!(await GitService.isGitRepository(resolvedPath))) {
-					throw new Error("Target path is not a git repository");
+					throw UserError.notGitRepository();
 				}
 				targetPath = await GitService.getRepoRoot(resolvedPath);
 			} else {
 				if (!(await GitService.isGitRepository(projectPath))) {
-					throw new Error("Current directory is not a git repository.");
+					throw UserError.notGitRepository();
 				}
 
 				const repoRoot = await GitService.getRepoRoot(projectPath);
@@ -42,18 +43,18 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 				// Load project config to get project name
 				const config = await ConfigService.readProjectConfig(configPath);
 				if (!config) {
-					throw new Error("No Grove configuration found. Run 'grove init' first");
+					throw UserError.notInitialized();
 				}
 
 				// Try constructing the worktree path using the same pattern as setup
 				const possiblePath = resolve(configPath, `../${config.project}__worktrees/${path}`);
 				if (await FileService.pathExists(possiblePath)) {
 					if (!(await GitService.isGitRepository(possiblePath))) {
-						throw new Error("Target path is not a git repository");
+						throw UserError.notGitRepository();
 					}
 					targetPath = await GitService.getRepoRoot(possiblePath);
 				} else {
-					throw new Error(`Path does not exist: ${path}. Tried both '${resolve(path)}' and '${possiblePath}'`);
+					throw UserError.invalidPath(`${path}. Tried both '${resolve(path)}' and '${possiblePath}'`);
 				}
 			}
 		}
@@ -62,25 +63,25 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 
 		// Validate the target path exists (this should now always pass)
 		if (!(await FileService.pathExists(targetPath))) {
-			throw new Error(`Path does not exist: ${targetPath}`);
+			throw UserError.invalidPath(targetPath);
 		}
 
 		// Check if it's a valid git repository
 		if (!(await GitService.isGitRepository(targetPath))) {
-			throw new Error("Target path is not a git repository");
+			throw UserError.notGitRepository();
 		}
 
 		// Get current branch
 		const currentBranch = await GitService.getCurrentBranch(targetPath);
 		if (!currentBranch) {
-			throw new Error("Could not determine current branch");
+			throw SystemError.gitOperationFailed("get current branch");
 		}
 
 		// Find the main worktree to get config
 		const worktrees = await GitService.getWorktrees(targetPath);
 		const mainWorktree = worktrees.find(w => w.isMain);
 		if (!mainWorktree) {
-			throw new Error("Could not find main worktree");
+			throw SystemError.gitOperationFailed("find main worktree");
 		}
 		
 		// If we're inside the target worktree, move to the main worktree to avoid invalid cwd errors.
@@ -104,7 +105,7 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 		// Check if we're trying to delete the main worktree
 		const mainBranch = await GitService.getMainBranch(targetPath);
 		if (currentBranch === mainBranch && targetPath === mainWorktree.path) {
-			throw new Error("Cannot delete the main worktree");
+			throw UserError.cannotDeleteMain(targetPath);
 		}
 
 		let mergeTarget = mainBranch;
@@ -131,7 +132,7 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 		// Load project config (we may have already loaded it above for path resolution)
 		const config = await ConfigService.readProjectConfig(mainWorktree.path);
 		if (!config) {
-			throw new Error("No Grove configuration found. Run 'grove init' first");
+			throw UserError.notInitialized();
 		}
 
 		// Check for uncommitted changes
