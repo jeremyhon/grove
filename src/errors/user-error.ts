@@ -77,4 +77,16 @@ export class UserError extends GroveError {
 			suggestion: "Feature names must be valid git branch names (alphanumeric, hyphens, underscores).",
 		});
 	}
+
+	static mergeConflicts(branch: string, conflictingFiles: string[]): UserError {
+		const fileList = conflictingFiles.length > 5 
+			? conflictingFiles.slice(0, 5).join(", ") + `, and ${conflictingFiles.length - 5} more files`
+			: conflictingFiles.join(", ");
+			
+		return new UserError({
+			code: GroveErrorCode.MERGE_CONFLICTS,
+			message: `Merge conflicts detected when merging branch '${branch}'. Conflicting files: ${fileList}`,
+			suggestion: "Resolve the conflicts manually in the feature branch directory, commit the changes, then run 'grove merge' again.",
+		});
+	}
 }

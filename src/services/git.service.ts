@@ -340,8 +340,18 @@ export class GitService {
 		try {
 			log?.verbose(`Merging branch '${branch}' into current branch`);
 			const result = await Bun.$`git -C ${path} merge ${branch}`.quiet();
+			
 			if (result.exitCode !== 0) {
 				spinner?.fail();
+				
+				// Check if it's a merge conflict
+				const conflictFiles = await GitService.getConflictingFiles(path);
+				if (conflictFiles.length > 0) {
+					// Import UserError dynamically to avoid circular dependency
+					const { UserError } = await import("../errors/index.js");
+					throw UserError.mergeConflicts(branch, conflictFiles);
+				}
+				
 				throw new Error(`Failed to merge branch: ${result.stderr.toString()}`);
 			}
 			
@@ -349,7 +359,25 @@ export class GitService {
 			log?.verbose(`Branch '${branch}' merged successfully`);
 		} catch (error) {
 			spinner?.fail();
+			
+			// If it's already a UserError (like merge conflicts), re-throw it
+			if (error instanceof Error && error.name === "UserError") {
+				throw error;
+			}
+			
 			throw new Error(`Failed to merge branch: ${error}`);
+		}
+	}
+
+	static async getConflictingFiles(path: string): Promise<string[]> {
+		try {
+			const result = await Bun.$`git -C ${path} diff --name-only --diff-filter=U`.quiet();
+			if (result.exitCode === 0) {
+				return result.stdout.toString().split("\n").filter(line => line.trim());
+			}
+			return [];
+		} catch {
+			return [];
 		}
 	}
 

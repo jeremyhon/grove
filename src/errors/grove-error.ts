@@ -9,6 +9,7 @@ export enum GroveErrorCode {
 	CANNOT_MERGE_FROM_MAIN = "G107",
 	DIRECTORY_EXISTS = "G108",
 	INVALID_FEATURE_NAME = "G109",
+	MERGE_CONFLICTS = "G110",
 	
 	// System errors (2xx)
 	GIT_OPERATION_FAILED = "G201",
