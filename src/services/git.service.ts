@@ -93,7 +93,24 @@ export class GitService {
 
 	static async createWorktree(path: string, branch: string, basePath: string = process.cwd()): Promise<void> {
 		try {
-			const result = await Bun.$`git -C ${basePath} worktree add ${path} -b ${branch}`.quiet();
+			// Check if branch already exists
+			let branchExists = false;
+			try {
+				const branchCheck = await Bun.$`git -C ${basePath} rev-parse --verify ${branch}`.quiet();
+				branchExists = branchCheck.exitCode === 0;
+			} catch {
+				// Branch doesn't exist
+			}
+			
+			let result;
+			if (branchExists) {
+				// Branch exists, create worktree without -b flag
+				result = await Bun.$`git -C ${basePath} worktree add ${path} ${branch}`.quiet();
+			} else {
+				// Branch doesn't exist, create it with -b flag
+				result = await Bun.$`git -C ${basePath} worktree add ${path} -b ${branch}`.quiet();
+			}
+			
 			if (result.exitCode !== 0) {
 				throw new Error(`Failed to create worktree: ${result.stderr.toString()}`);
 			}
