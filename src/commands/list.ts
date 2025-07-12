@@ -2,9 +2,11 @@ import Table from "cli-table3";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
 import { PortService } from "../services/port.service.js";
+import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
 
 export async function listCommand(options: CommandOptions & { json?: boolean }): Promise<void> {
+	const log = createLogService({ verbose: options.verbose ?? false });
 	const projectPath = process.cwd();
 	
 	// Check if this is a git repository
@@ -35,7 +37,7 @@ export async function listCommand(options: CommandOptions & { json?: boolean }):
 	
 	// Output in JSON format if requested
 	if (options.json) {
-		console.log(JSON.stringify(data, null, 2));
+		log.stdout(JSON.stringify(data, null, 2));
 		return;
 	}
 	
@@ -60,11 +62,9 @@ export async function listCommand(options: CommandOptions & { json?: boolean }):
 		]);
 	}
 	
-	console.log(table.toString());
+	log.stdout(table.toString());
 	
-	if (options.verbose) {
-		console.log(`\nProject: ${config.project}`);
-		console.log(`Base Port: ${config.basePort}`);
-		console.log(`Package Manager: ${config.packageManager}`);
-	}
+	log.verbose(`Project: ${config.project}`);
+	log.verbose(`Base Port: ${config.basePort}`);
+	log.verbose(`Package Manager: ${config.packageManager}`);
 }

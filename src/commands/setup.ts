@@ -4,9 +4,11 @@ import { GitService } from "../services/git.service.js";
 import { PortService } from "../services/port.service.js";
 import { FileService } from "../services/file.service.js";
 import { HookService } from "../services/hook.service.js";
+import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
 
 export async function setupCommand(feature: string, options: CommandOptions): Promise<void> {
+	const log = createLogService({ verbose: options.verbose ?? false });
 	const projectPath = process.cwd();
 	
 	// Check if this is a git repository
@@ -33,7 +35,7 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 	
 	try {
 		// Create worktree
-		await GitService.createWorktree(targetPath, branchName, projectPath);
+		await GitService.createWorktree(targetPath, branchName, projectPath, log);
 		
 		// Get next available port
 		const port = await PortService.getNextAvailablePort(config.projectId, config.basePort);
@@ -52,26 +54,24 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 			branch: branchName,
 			port,
 			worktreePath: targetPath,
-		});
+		}, log);
 		
 		// Clean up orphaned ports
 		await PortService.cleanupOrphanedPorts(config.projectId);
 		
 		// Output target path for cd integration
-		console.log(targetPath);
+		log.stdout(targetPath);
 		
-		if (options.verbose) {
-			console.log(`✅ Worktree created: ${feature}`);
-			console.log(`   Branch: ${branchName}`);
-			console.log(`   Port: ${port}`);
-			console.log(`   Path: ${targetPath}`);
-		}
+		log.verbose(`Worktree created: ${feature}`);
+		log.verbose(`Branch: ${branchName}`);
+		log.verbose(`Port: ${port}`);
+		log.verbose(`Path: ${targetPath}`);
 		
 	} catch (error) {
 		// Clean up on failure
 		if (await FileService.pathExists(targetPath)) {
 			try {
-				await GitService.deleteWorktree(targetPath, projectPath);
+				await GitService.deleteWorktree(targetPath, projectPath, log);
 			} catch {
 				// If git cleanup fails, try filesystem cleanup
 				await FileService.deleteDirectory(targetPath);

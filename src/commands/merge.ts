@@ -2,9 +2,11 @@ import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
 import { PortService } from "../services/port.service.js";
 import { HookService } from "../services/hook.service.js";
+import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
 
 export async function mergeCommand(options: CommandOptions & { hooks?: boolean }): Promise<void> {
+	const log = createLogService({ verbose: options.verbose ?? false });
 	const currentPath = process.cwd();
 	const runHooks = options.hooks !== false;
 
@@ -45,9 +47,7 @@ export async function mergeCommand(options: CommandOptions & { hooks?: boolean }
 			throw new Error("Worktree has uncommitted changes. Please commit or stash them first");
 		}
 
-		if (options.verbose) {
-			console.log(`Merging branch '${currentBranch}' into '${mainBranch}'`);
-		}
+		log.verbose(`Merging branch '${currentBranch}' into '${mainBranch}'`);
 
 		// Run preMerge hook
 		if (runHooks) {
@@ -55,17 +55,17 @@ export async function mergeCommand(options: CommandOptions & { hooks?: boolean }
 				projectPath: mainWorktree.path,
 				branch: currentBranch,
 				worktreePath: currentPath,
-			});
+			}, log);
 		}
 
 		// Switch to main branch in main worktree
 		await GitService.switchToMainBranch(mainWorktree.path);
 
 		// Merge the feature branch
-		await GitService.mergeBranch(currentBranch, mainWorktree.path);
+		await GitService.mergeBranch(currentBranch, mainWorktree.path, log);
 
 		// Clean up: remove the worktree
-		await GitService.deleteWorktree(currentPath, mainWorktree.path);
+		await GitService.deleteWorktree(currentPath, mainWorktree.path, log);
 
 		// Release the port
 		await PortService.releasePort(currentPath, config.projectId);
@@ -75,19 +75,15 @@ export async function mergeCommand(options: CommandOptions & { hooks?: boolean }
 			await HookService.runHook("postMerge", config, {
 				projectPath: mainWorktree.path,
 				branch: currentBranch,
-			});
+			}, log);
 		}
 
-		if (options.verbose) {
-			console.log(`Successfully merged '${currentBranch}' and cleaned up worktree`);
-		}
+		log.verbose(`Successfully merged '${currentBranch}' and cleaned up worktree`);
 
 		// Output the main worktree path for shell integration
-		console.log(mainWorktree.path);
+		log.stdout(mainWorktree.path);
 	} catch (error) {
-		if (options.verbose) {
-			console.error(`Merge failed: ${error}`);
-		}
+		log.verbose(`Merge failed: ${error}`);
 		throw error;
 	}
 }

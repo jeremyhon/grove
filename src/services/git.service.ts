@@ -1,4 +1,5 @@
 import type { WorktreeInfo } from "../types.js";
+import type { LogService } from "./log.service.js";
 
 export class GitService {
 	static async isGitRepository(path: string = process.cwd()): Promise<boolean> {
@@ -91,9 +92,12 @@ export class GitService {
 		}
 	}
 
-	static async createWorktree(path: string, branch: string, basePath: string = process.cwd()): Promise<void> {
+	static async createWorktree(path: string, branch: string, basePath: string = process.cwd(), log?: LogService): Promise<void> {
+		const spinner = log?.spinner(`Creating worktree for branch '${branch}'`);
+		
 		try {
 			// Check if branch already exists
+			log?.verbose(`Checking if branch '${branch}' exists`);
 			let branchExists = false;
 			try {
 				const branchCheck = await Bun.$`git -C ${basePath} rev-parse --verify ${branch}`.quiet();
@@ -105,27 +109,42 @@ export class GitService {
 			let result;
 			if (branchExists) {
 				// Branch exists, create worktree without -b flag
+				log?.verbose(`Branch '${branch}' exists, creating worktree`);
 				result = await Bun.$`git -C ${basePath} worktree add ${path} ${branch}`.quiet();
 			} else {
 				// Branch doesn't exist, create it with -b flag
+				log?.verbose(`Creating new branch '${branch}' and worktree`);
 				result = await Bun.$`git -C ${basePath} worktree add ${path} -b ${branch}`.quiet();
 			}
 			
 			if (result.exitCode !== 0) {
+				spinner?.fail();
 				throw new Error(`Failed to create worktree: ${result.stderr.toString()}`);
 			}
+			
+			spinner?.succeed();
+			log?.verbose(`Worktree created successfully at ${path}`);
 		} catch (error) {
+			spinner?.fail();
 			throw new Error(`Failed to create worktree: ${error}`);
 		}
 	}
 
-	static async deleteWorktree(path: string, basePath: string = process.cwd()): Promise<void> {
+	static async deleteWorktree(path: string, basePath: string = process.cwd(), log?: LogService): Promise<void> {
+		const spinner = log?.spinner(`Deleting worktree at ${path}`);
+		
 		try {
+			log?.verbose(`Removing worktree at ${path}`);
 			const result = await Bun.$`git -C ${basePath} worktree remove ${path}`.quiet();
 			if (result.exitCode !== 0) {
+				spinner?.fail();
 				throw new Error(`Failed to delete worktree: ${result.stderr.toString()}`);
 			}
+			
+			spinner?.succeed();
+			log?.verbose(`Worktree deleted successfully`);
 		} catch (error) {
+			spinner?.fail();
 			throw new Error(`Failed to delete worktree: ${error}`);
 		}
 	}
@@ -159,13 +178,21 @@ export class GitService {
 		}
 	}
 
-	static async mergeBranch(branch: string, path: string): Promise<void> {
+	static async mergeBranch(branch: string, path: string, log?: LogService): Promise<void> {
+		const spinner = log?.spinner(`Merging branch '${branch}'`);
+		
 		try {
+			log?.verbose(`Merging branch '${branch}' into current branch`);
 			const result = await Bun.$`git -C ${path} merge ${branch}`.quiet();
 			if (result.exitCode !== 0) {
+				spinner?.fail();
 				throw new Error(`Failed to merge branch: ${result.stderr.toString()}`);
 			}
+			
+			spinner?.succeed();
+			log?.verbose(`Branch '${branch}' merged successfully`);
 		} catch (error) {
+			spinner?.fail();
 			throw new Error(`Failed to merge branch: ${error}`);
 		}
 	}

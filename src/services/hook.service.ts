@@ -1,4 +1,5 @@
 import type { ProjectConfig } from "../types.js";
+import type { LogService } from "./log.service.js";
 
 export class HookService {
 	static async runHook(
@@ -9,12 +10,17 @@ export class HookService {
 			branch?: string;
 			port?: number;
 			worktreePath?: string;
-		}
+		},
+		log?: LogService
 	): Promise<void> {
 		const hookCommand = config.hooks[hookName];
 		if (!hookCommand) {
+			log?.verbose(`No ${hookName} hook configured`);
 			return;
 		}
+
+		const spinner = log?.spinner(`Running ${hookName} hook: ${hookCommand}`);
+		log?.verbose(`Executing ${hookName} hook: ${hookCommand}`);
 
 		const env = {
 			...process.env,
@@ -31,9 +37,14 @@ export class HookService {
 		try {
 			const result = await Bun.$`sh -c "cd ${context.worktreePath || context.projectPath} && ${hookCommand}"`.env(env);
 			if (result.exitCode !== 0) {
+				spinner?.fail();
 				throw new Error(`Hook '${hookName}' failed: ${result.stderr.toString()}`);
 			}
+			
+			spinner?.succeed();
+			log?.verbose(`Hook '${hookName}' completed successfully`);
 		} catch (error) {
+			spinner?.fail();
 			throw new Error(`Failed to run hook '${hookName}': ${error}`);
 		}
 	}

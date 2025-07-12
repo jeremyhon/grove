@@ -5,9 +5,11 @@ import { GitService } from "../services/git.service.js";
 import { PortService } from "../services/port.service.js";
 import { HookService } from "../services/hook.service.js";
 import { FileService } from "../services/file.service.js";
+import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
 
 export async function deleteCommand(path: string, options: CommandOptions & { force?: boolean }): Promise<void> {
+	const log = createLogService({ verbose: options.verbose ?? false });
 	const targetPath = resolve(path);
 	const force = options.force || false;
 
@@ -50,7 +52,7 @@ export async function deleteCommand(path: string, options: CommandOptions & { fo
 		// Check for uncommitted changes
 		const isClean = await GitService.isWorktreeClean(targetPath);
 		if (!isClean && !force) {
-			console.warn("Warning: Worktree has uncommitted changes");
+			log.warn("Worktree has uncommitted changes");
 		}
 
 		// Get confirmation from user unless forced
@@ -63,24 +65,22 @@ export async function deleteCommand(path: string, options: CommandOptions & { fo
 			});
 
 			if (!response.confirm) {
-				console.log("Delete cancelled");
+				log.info("Delete cancelled");
 				return;
 			}
 		}
 
-		if (options.verbose) {
-			console.log(`Deleting worktree at '${targetPath}'`);
-		}
+		log.verbose(`Deleting worktree at '${targetPath}'`);
 
 		// Run preDelete hook
 		await HookService.runHook("preDelete", config, {
 			projectPath: mainWorktree.path,
 			branch: currentBranch,
 			worktreePath: targetPath,
-		});
+		}, log);
 
 		// Delete the worktree
-		await GitService.deleteWorktree(targetPath, mainWorktree.path);
+		await GitService.deleteWorktree(targetPath, mainWorktree.path, log);
 
 		// Release the port
 		await PortService.releasePort(targetPath, config.projectId);
@@ -89,17 +89,12 @@ export async function deleteCommand(path: string, options: CommandOptions & { fo
 		await HookService.runHook("postDelete", config, {
 			projectPath: mainWorktree.path,
 			branch: currentBranch,
-		});
+		}, log);
 
-		if (options.verbose) {
-			console.log(`Successfully deleted worktree '${targetPath}'`);
-		}
-
-		console.log("Worktree deleted successfully");
+		log.verbose(`Successfully deleted worktree '${targetPath}'`);
+		log.success("Worktree deleted successfully");
 	} catch (error) {
-		if (options.verbose) {
-			console.error(`Delete failed: ${error}`);
-		}
+		log.verbose(`Delete failed: ${error}`);
 		throw error;
 	}
 }

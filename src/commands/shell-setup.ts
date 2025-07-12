@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { FileService } from "../services/file.service.js";
+import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
 
 const SHELL_SCRIPT_CONTENT = `# Grove Shell Integration
@@ -44,6 +45,8 @@ fi
 const SHELL_SOURCE_LINE = '[[ -s "$HOME/.grove/grove.sh" ]] && source "$HOME/.grove/grove.sh"';
 
 export async function shellSetupCommand(options: CommandOptions): Promise<void> {
+	const log = createLogService({ verbose: options.verbose ?? false });
+	
 	try {
 		const groveDir = `${homedir()}/.grove`;
 		const scriptPath = `${groveDir}/grove.sh`;
@@ -78,10 +81,8 @@ export async function shellSetupCommand(options: CommandOptions): Promise<void> 
 		// Write the shell integration script
 		await Bun.write(scriptPath, SHELL_SCRIPT_CONTENT);
 
-		if (options.verbose) {
-			console.log(`Created shell integration script at: ${scriptPath}`);
-			console.log(`Detected shell: ${shell || 'unknown'}, using ${shellRcFile}`);
-		}
+		log.verbose(`Created shell integration script at: ${scriptPath}`);
+		log.verbose(`Detected shell: ${shell || 'unknown'}, using ${shellRcFile}`);
 
 		// Check if shell rc file exists and add source line if not already present
 		if (await FileService.pathExists(shellRcPath)) {
@@ -92,26 +93,20 @@ export async function shellSetupCommand(options: CommandOptions): Promise<void> 
 				const updatedContent = shellRcContent + '\n\n# Grove shell integration\n' + SHELL_SOURCE_LINE + '\n';
 				await Bun.write(shellRcPath, updatedContent);
 				
-				if (options.verbose) {
-					console.log(`Added Grove source line to ${shellRcPath}`);
-					console.log("Shell integration installed!");
-					console.log(`Reload your shell or run: source ~/${shellRcFile}`);
-				}
+				log.verbose(`Added Grove source line to ${shellRcPath}`);
+				log.verbose("Shell integration installed!");
+				log.verbose(`Reload your shell or run: source ~/${shellRcFile}`);
 			} else {
-				if (options.verbose) {
-					console.log(`Shell integration already installed in ~/${shellRcFile}`);
-				}
+				log.verbose(`Shell integration already installed in ~/${shellRcFile}`);
 			}
 		} else {
-			console.log("Shell integration script created!");
-			console.log(`\nAdd this line to your ~/${shellRcFile}:`);
-			console.log(SHELL_SOURCE_LINE);
-			console.log(`\nThen reload your shell or run: source ~/${shellRcFile}`);
+			log.stdout("Shell integration script created!");
+			log.stdout(`\nAdd this line to your ~/${shellRcFile}:`);
+			log.stdout(SHELL_SOURCE_LINE);
+			log.stdout(`\nThen reload your shell or run: source ~/${shellRcFile}`);
 		}
 	} catch (error) {
-		if (options.verbose) {
-			console.error(`Failed to create shell integration: ${error}`);
-		}
+		log.verbose(`Failed to create shell integration: ${error}`);
 		throw error;
 	}
 }

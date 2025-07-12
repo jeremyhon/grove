@@ -1,9 +1,11 @@
 import { basename } from "path";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
+import { createLogService } from "../services/log.service.js";
 import type { CommandOptions, ProjectConfig } from "../types.js";
 
 export async function initCommand(options: CommandOptions): Promise<void> {
+	const log = createLogService({ verbose: options.verbose ?? false });
 	const projectPath = process.cwd();
 	
 	// Check if this is a git repository
@@ -49,12 +51,8 @@ export async function initCommand(options: CommandOptions): Promise<void> {
 	};
 	await ConfigService.writeGlobalState(globalState);
 	
-	if (options.verbose) {
-		console.log(`✅ Grove initialized for project: ${projectName}`);
-		console.log(`   Project ID: ${projectId}`);
-		console.log(`   Package Manager: ${packageManager}`);
-		console.log(`   Base Port: ${config.basePort}`);
-	} else {
-		console.log(`✅ Grove initialized for ${projectName}`);
-	}
+	log.success(`Grove initialized for ${projectName}`);
+	log.verbose(`Project ID: ${projectId}`);
+	log.verbose(`Package Manager: ${packageManager}`);
+	log.verbose(`Base Port: ${config.basePort}`);
 }
