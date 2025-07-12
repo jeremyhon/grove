@@ -242,6 +242,19 @@ test("service functionality", () => {
 
 **Current Status:** 61 passing tests with 0 failures
 
+See `TESTING.md` for detailed testing guidelines and best practices.
+
+## Development Best Practices
+
+### Testing Architecture
+Design tests systematically with reusable utilities, clean state, and appropriate mocking levels.
+
+### Decision Making
+Ask for approval when changing direction from established requirements or approaches.
+
+### Research First
+Always research conventional patterns before inventing custom solutions.
+
 ## Build & Distribution
 
 - **Build Grove:** `bun run build` - builds Grove into a single binary
