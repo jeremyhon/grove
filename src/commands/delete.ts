@@ -10,11 +10,33 @@ import type { CommandOptions } from "../types.js";
 
 export async function deleteCommand(path: string, options: CommandOptions & { force?: boolean }): Promise<void> {
 	const log = createLogService({ verbose: options.verbose ?? false });
-	const targetPath = resolve(path);
 	const force = options.force || false;
+	const projectPath = process.cwd();
 
 	try {
-		// Validate the target path exists
+		// First, try to resolve the path directly
+		let targetPath = resolve(path);
+		
+		// If the direct path doesn't exist, try to construct the worktree path
+		if (!(await FileService.pathExists(targetPath))) {
+			// Load project config to get project name
+			const config = await ConfigService.readProjectConfig(projectPath);
+			if (!config) {
+				throw new Error("No Grove configuration found. Run 'grove init' first");
+			}
+			
+			// Try constructing the worktree path using the same pattern as setup
+			const possiblePath = resolve(projectPath, `../${config.project}-${path}`);
+			if (await FileService.pathExists(possiblePath)) {
+				targetPath = possiblePath;
+			} else {
+				throw new Error(`Path does not exist: ${path}. Tried both '${resolve(path)}' and '${possiblePath}'`);
+			}
+		}
+
+		log.verbose(`Resolved target path: ${targetPath}`);
+
+		// Validate the target path exists (this should now always pass)
 		if (!(await FileService.pathExists(targetPath))) {
 			throw new Error(`Path does not exist: ${targetPath}`);
 		}
@@ -43,7 +65,7 @@ export async function deleteCommand(path: string, options: CommandOptions & { fo
 			throw new Error("Cannot delete the main worktree");
 		}
 
-		// Load project config
+		// Load project config (we may have already loaded it above for path resolution)
 		const config = await ConfigService.readProjectConfig(mainWorktree.path);
 		if (!config) {
 			throw new Error("No Grove configuration found. Run 'grove init' first");
