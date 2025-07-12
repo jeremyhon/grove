@@ -22,6 +22,10 @@ export async function setupTestRepo(): Promise<TestRepo> {
 	const originalCwd = process.cwd();
 	const testRepoPath = join(originalCwd, TEST_REPO_NAME);
 
+	// Set test-specific state directory to isolate from real Grove state
+	const testStateDir = join(originalCwd, ".grove-test");
+	process.env.GROVE_STATE_DIR = testStateDir;
+
 	// Teardown existing test repo and any worktree directories if they exist
 	await teardownTestRepo(testRepoPath, originalCwd);
 	
@@ -80,6 +84,14 @@ export async function teardownTestRepo(testRepoPath?: string, originalCwd?: stri
 	// Remove test repository
 	await rm(repoPath, { recursive: true, force: true });
 
+	// Clean up test-specific Grove state only (never touch real ~/.grove)
+	const testStateDir = process.env.GROVE_STATE_DIR;
+	if (testStateDir && testStateDir.includes(".grove-test")) {
+		await rm(testStateDir, { recursive: true, force: true });
+	}
+
+	// Restore original state directory
+	delete process.env.GROVE_STATE_DIR;
 	// Clean up any worktree directories
 	await cleanupWorktreeDirectories(cwd);
 }
