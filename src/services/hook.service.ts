@@ -29,7 +29,7 @@ export class HookService {
 		};
 
 		try {
-			const result = await Bun.$`cd ${context.worktreePath || context.projectPath} && ${hookCommand}`.env(env);
+			const result = await Bun.$`sh -c "cd ${context.worktreePath || context.projectPath} && ${hookCommand}"`.env(env);
 			if (result.exitCode !== 0) {
 				throw new Error(`Hook '${hookName}' failed: ${result.stderr.toString()}`);
 			}
