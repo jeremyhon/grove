@@ -47,7 +47,30 @@ export async function shellSetupCommand(options: CommandOptions): Promise<void> 
 	try {
 		const groveDir = `${homedir()}/.grove`;
 		const scriptPath = `${groveDir}/grove.sh`;
-		const shellRcPath = `${homedir()}/.zshrc`;
+		
+		// Detect shell from environment
+		const shell = process.env.SHELL || '';
+		let shellRcFile: string;
+		
+		if (shell.includes('zsh')) {
+			shellRcFile = '.zshrc';
+		} else if (shell.includes('bash')) {
+			shellRcFile = '.bashrc';
+		} else {
+			// Fallback: check which rc file exists
+			const zshrcPath = `${homedir()}/.zshrc`;
+			const bashrcPath = `${homedir()}/.bashrc`;
+			
+			if (await FileService.pathExists(zshrcPath)) {
+				shellRcFile = '.zshrc';
+			} else if (await FileService.pathExists(bashrcPath)) {
+				shellRcFile = '.bashrc';
+			} else {
+				shellRcFile = '.zshrc'; // Default to zsh
+			}
+		}
+		
+		const shellRcPath = `${homedir()}/${shellRcFile}`;
 
 		// Ensure ~/.grove directory exists
 		await mkdir(groveDir, { recursive: true });
@@ -57,31 +80,33 @@ export async function shellSetupCommand(options: CommandOptions): Promise<void> 
 
 		if (options.verbose) {
 			console.log(`Created shell integration script at: ${scriptPath}`);
+			console.log(`Detected shell: ${shell || 'unknown'}, using ${shellRcFile}`);
 		}
 
-		// Check if .zshrc exists and add source line if not already present
+		// Check if shell rc file exists and add source line if not already present
 		if (await FileService.pathExists(shellRcPath)) {
 			const shellRcContent = await Bun.file(shellRcPath).text();
 			
 			if (!shellRcContent.includes('source "$HOME/.grove/grove.sh"')) {
-				// Add the source line to .zshrc
+				// Add the source line to shell rc file
 				const updatedContent = shellRcContent + '\n\n# Grove shell integration\n' + SHELL_SOURCE_LINE + '\n';
 				await Bun.write(shellRcPath, updatedContent);
 				
 				if (options.verbose) {
 					console.log(`Added Grove source line to ${shellRcPath}`);
+					console.log("Shell integration installed!");
+					console.log(`Reload your shell or run: source ~/${shellRcFile}`);
 				}
-				
-				console.log("Shell integration installed!");
-				console.log("Reload your shell or run: source ~/.zshrc");
 			} else {
-				console.log("Shell integration already installed in ~/.zshrc");
+				if (options.verbose) {
+					console.log(`Shell integration already installed in ~/${shellRcFile}`);
+				}
 			}
 		} else {
 			console.log("Shell integration script created!");
-			console.log("\nAdd this line to your ~/.zshrc or ~/.bashrc:");
+			console.log(`\nAdd this line to your ~/${shellRcFile}:`);
 			console.log(SHELL_SOURCE_LINE);
-			console.log("\nThen reload your shell or run: source ~/.zshrc");
+			console.log(`\nThen reload your shell or run: source ~/${shellRcFile}`);
 		}
 	} catch (error) {
 		if (options.verbose) {
