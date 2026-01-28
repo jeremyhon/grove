@@ -1,25 +1,14 @@
 export interface ProjectConfig {
 	projectId: string;
 	project: string;
-	basePort: number;
 	packageManager: "bun" | "npm" | "yarn" | "pnpm";
 	copyFiles: string[];
+	symlinkFiles: string[];
 	hooks: {
 		postSetup?: string;
-		preMerge?: string;
-		postMerge?: string;
 		preDelete?: string;
 		postDelete?: string;
 	};
-}
-
-export interface GlobalState {
-	projects: Record<string, ProjectState>;
-}
-
-export interface ProjectState {
-	basePath: string;
-	portAssignments: Record<string, number>;
 }
 
 export interface WorktreeInfo {
@@ -33,5 +22,4 @@ export type PackageManager = "bun" | "npm" | "yarn" | "pnpm";
 
 export interface CommandOptions {
 	verbose?: boolean;
-	dryRun?: boolean;
 }

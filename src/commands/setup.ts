@@ -1,7 +1,6 @@
 import { join } from "path";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
-import { PortService } from "../services/port.service.js";
 import { FileService } from "../services/file.service.js";
 import { HookService } from "../services/hook.service.js";
 import { createLogService } from "../services/log.service.js";
@@ -26,7 +25,8 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 	const branchName = GitService.sanitizeBranchName(feature);
 	
 	// Create target directory path
-	const targetPath = join(projectPath, `../${config.project}-${branchName}`);
+	const worktreeRoot = join(projectPath, `../${config.project}__worktrees`);
+	const targetPath = join(worktreeRoot, branchName);
 	
 	// Check if target directory already exists
 	if (await FileService.pathExists(targetPath)) {
@@ -35,36 +35,31 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 	
 	try {
 		// Create worktree
+		await FileService.createDirectory(worktreeRoot);
 		await GitService.createWorktree(targetPath, branchName, projectPath, log);
-		
-		// Get next available port
-		const port = await PortService.getNextAvailablePort(config.projectId, config.basePort);
-		
-		// Assign port to worktree
-		await PortService.assignPort(config.projectId, targetPath, port);
 		
 		// Copy files
 		if (config.copyFiles.length > 0) {
 			await FileService.copyFiles(config.copyFiles, projectPath, targetPath);
+		}
+
+		// Symlink files
+		if (config.symlinkFiles.length > 0) {
+			await FileService.symlinkFiles(config.symlinkFiles, projectPath, targetPath);
 		}
 		
 		// Run post-setup hook
 		await HookService.runHook("postSetup", config, {
 			projectPath,
 			branch: branchName,
-			port,
 			worktreePath: targetPath,
 		}, log);
-		
-		// Clean up orphaned ports
-		await PortService.cleanupOrphanedPorts(config.projectId);
 		
 		// Output target path for cd integration
 		log.stdout(targetPath);
 		
 		log.verbose(`Worktree created: ${feature}`);
 		log.verbose(`Branch: ${branchName}`);
-		log.verbose(`Port: ${port}`);
 		log.verbose(`Path: ${targetPath}`);
 		
 	} catch (error) {

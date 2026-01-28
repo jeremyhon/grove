@@ -1,7 +1,7 @@
 import Table from "cli-table3";
+import { relative } from "path";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
-import { PortService } from "../services/port.service.js";
 import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
 
@@ -23,15 +23,11 @@ export async function listCommand(options: CommandOptions & { json?: boolean }):
 	// Get worktrees
 	const worktrees = await GitService.getWorktrees(projectPath);
 	
-	// Get port assignments
-	const portAssignments = await PortService.getAllPortAssignments(config.projectId);
-	
 	// Combine data
 	const data = worktrees.map(worktree => ({
 		path: worktree.path,
 		branch: worktree.branch || "HEAD",
 		isMain: worktree.isMain || false,
-		port: portAssignments[worktree.path] || null,
 		head: worktree.head?.substring(0, 7) || "unknown",
 	}));
 	
@@ -43,20 +39,18 @@ export async function listCommand(options: CommandOptions & { json?: boolean }):
 	
 	// Create table
 	const table = new Table({
-		head: ["Path", "Branch", "Port", "Status", "Commit"],
-		colWidths: [40, 20, 8, 8, 10],
+		head: ["Path", "Branch", "Status", "Commit"],
+		colWidths: [44, 20, 8, 10],
 	});
 	
 	// Add rows
 	for (const item of data) {
-		const relativePath = item.path.replace(process.cwd(), ".");
+		const relativePath = relative(process.cwd(), item.path) || ".";
 		const status = item.isMain ? "main" : "feature";
-		const port = item.port ? item.port.toString() : "-";
 		
 		table.push([
 			relativePath,
 			item.branch,
-			port,
 			status,
 			item.head,
 		]);
@@ -65,6 +59,5 @@ export async function listCommand(options: CommandOptions & { json?: boolean }):
 	log.stdout(table.toString());
 	
 	log.verbose(`Project: ${config.project}`);
-	log.verbose(`Base Port: ${config.basePort}`);
 	log.verbose(`Package Manager: ${config.packageManager}`);
 }

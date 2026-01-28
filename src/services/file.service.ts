@@ -1,6 +1,6 @@
 import { glob } from "glob";
 import { join, dirname, basename } from "path";
-import { mkdir, rm, stat } from "node:fs/promises";
+import { mkdir, rm, stat, symlink } from "node:fs/promises";
 
 export class FileService {
 	static async copyFiles(patterns: string[], sourcePath: string, targetPath: string): Promise<void> {
@@ -24,6 +24,27 @@ export class FileService {
 		}
 	}
 
+	static async symlinkFiles(patterns: string[], sourcePath: string, targetPath: string): Promise<void> {
+		for (const pattern of patterns) {
+			try {
+				const files = await glob(pattern, {
+					cwd: sourcePath,
+					dot: true,
+					absolute: false,
+				});
+
+				for (const file of files) {
+					const sourceFile = join(sourcePath, file);
+					const targetFile = join(targetPath, file);
+
+					await FileService.createSymlink(sourceFile, targetFile);
+				}
+			} catch (error) {
+				throw new Error(`Failed to symlink files matching pattern "${pattern}": ${error}`);
+			}
+		}
+	}
+
 	private static async copyFile(source: string, target: string): Promise<void> {
 		try {
 			const sourceFile = Bun.file(source);
@@ -42,6 +63,32 @@ export class FileService {
 			await Bun.write(target, content);
 		} catch (error) {
 			throw new Error(`Failed to copy file from ${source} to ${target}: ${error}`);
+		}
+	}
+
+	private static async createSymlink(source: string, target: string): Promise<void> {
+		try {
+			const sourceFile = Bun.file(source);
+			const exists = await sourceFile.exists();
+
+			if (!exists) {
+				return;
+			}
+
+			const targetDir = dirname(target);
+			await mkdir(targetDir, { recursive: true });
+
+			if (await FileService.pathExists(target)) {
+				await rm(target, { recursive: true, force: true });
+			}
+
+			const sourceStats = await stat(source);
+			const isDir = sourceStats.isDirectory();
+			const linkType = process.platform === "win32" ? "junction" : isDir ? "dir" : "file";
+
+			await symlink(source, target, linkType);
+		} catch (error) {
+			throw new Error(`Failed to symlink from ${source} to ${target}: ${error}`);
 		}
 	}
 

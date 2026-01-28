@@ -1,7 +1,7 @@
 import { test, expect, beforeEach, afterEach } from "bun:test";
 import { join } from "path";
 import { tmpdir } from "os";
-import { mkdir, rm } from "node:fs/promises";
+import { lstat, mkdir, rm } from "node:fs/promises";
 import { FileService } from "../src/services/file.service.js";
 
 // Create temporary test directories
@@ -74,6 +74,19 @@ test("FileService - copyFiles handles nested directories", async () => {
 test("FileService - copyFiles handles empty patterns gracefully", async () => {
 	await FileService.copyFiles([], testSourceDir, testTargetDir);
 	// Should not throw
+});
+
+test("FileService - symlinkFiles creates symlinks", async () => {
+	await Bun.write(join(testSourceDir, ".env.local"), "LOCAL_VAR=local");
+
+	await FileService.symlinkFiles([".env.local"], testSourceDir, testTargetDir);
+
+	const linkedPath = join(testTargetDir, ".env.local");
+	const stats = await lstat(linkedPath);
+	expect(stats.isSymbolicLink()).toBe(true);
+
+	const content = await Bun.file(linkedPath).text();
+	expect(content).toBe("LOCAL_VAR=local");
 });
 
 test("FileService - copyDirectory copies entire directory", async () => {

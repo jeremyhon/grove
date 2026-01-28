@@ -38,15 +38,11 @@ mock.module("../src/services/log.service.js", () => ({
 Grove provides reusable test utilities in `tests/test-utils.ts`:
 
 ```ts
-import { setupTestRepo, teardownTestRepo, createMockLogService, mockServices } from "./test-utils.js";
+import { setupTestRepo, teardownTestRepo, mockServices } from "./test-utils.js";
 
 beforeEach(async () => {
   // Creates clean git repo with Grove initialization
   testRepo = await setupTestRepo();
-  
-  // Mock log service using Bun's mock.module()
-  mockLogService = createMockLogService();
-  mockLogService.setup();
   
   // Mock other services to prevent side effects
   mockedServices = await mockServices();
@@ -54,7 +50,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
   // Clean up all mocks and test data
-  mockLogService.teardown();
   mockedServices.restore();
   await testRepo.cleanup();
 });

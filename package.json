@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "bun --hot src/index.ts",
     "build": "bun build src/index.ts --compile --outfile grove",
-    "install": "bun run build && cp ./grove ~/.local/bin/grove && grove shell-setup",
+    "install": "bun run build && mkdir -p ~/.local/bin && cp ./grove ~/.local/bin/grove && ./grove shell-setup",
     "check": "bunx biome check .",
     "format": "bunx biome format --write .",
     "lint": "bunx biome lint .",
@@ -30,6 +30,7 @@
     "glob": "^11.0.3",
     "ora": "^8.2.0",
     "prompts": "^2.4.2",
+    "yaml": "^2.8.1",
     "zod": "^4.0.2"
   }
 }

@@ -8,7 +8,7 @@ const SHELL_SCRIPT_CONTENT = `# Grove Shell Integration
 # This script provides automatic directory changing for grove commands
 
 grove() {
-  if [ "$1" = "merge" ] || [ "$1" = "setup" ]; then
+  if [ "$1" = "setup" ]; then
     local output=$(command grove "$@")
     local exit_code=$?
     if [ $exit_code -eq 0 ] && [ -d "$output" ]; then
@@ -32,9 +32,9 @@ if type compdef >/dev/null 2>&1; then
       'init:Initialize Grove configuration for a git project'
       'setup:Create a new worktree for feature development'
       'list:List all worktrees with information'
-      'merge:Merge current feature branch back to main and cleanup'
-      'delete:Delete a worktree and release its assigned port'
+      'delete:Delete a worktree'
       'shell-setup:Generate shell integration script'
+      'migrate-workmux:Migrate workmux YAML to Grove JSON'
     )
     _describe 'commands' commands
   }

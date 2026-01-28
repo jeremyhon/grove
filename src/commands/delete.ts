@@ -2,7 +2,6 @@ import prompts from "prompts";
 import { resolve } from "path";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
-import { PortService } from "../services/port.service.js";
 import { HookService } from "../services/hook.service.js";
 import { FileService } from "../services/file.service.js";
 import { createLogService } from "../services/log.service.js";
@@ -26,7 +25,7 @@ export async function deleteCommand(path: string, options: CommandOptions & { fo
 			}
 			
 			// Try constructing the worktree path using the same pattern as setup
-			const possiblePath = resolve(projectPath, `../${config.project}-${path}`);
+			const possiblePath = resolve(projectPath, `../${config.project}__worktrees/${path}`);
 			if (await FileService.pathExists(possiblePath)) {
 				targetPath = possiblePath;
 			} else {
@@ -103,9 +102,6 @@ export async function deleteCommand(path: string, options: CommandOptions & { fo
 
 		// Delete the worktree
 		await GitService.deleteWorktree(targetPath, mainWorktree.path, log);
-
-		// Release the port
-		await PortService.releasePort(targetPath, config.projectId);
 
 		// Run postDelete hook
 		await HookService.runHook("postDelete", config, {

@@ -1,35 +1,22 @@
 import { z } from "zod";
 import { join } from "path";
-import { homedir } from "os";
-import { mkdir } from "node:fs/promises";
-import type { ProjectConfig, GlobalState, PackageManager } from "../types.js";
+import type { ProjectConfig, PackageManager } from "../types.js";
 
 const ProjectConfigSchema = z.object({
 	projectId: z.string(),
 	project: z.string(),
-	basePort: z.number().min(1024).max(65535),
 	packageManager: z.enum(["bun", "npm", "yarn", "pnpm"]),
 	copyFiles: z.array(z.string()),
+	symlinkFiles: z.array(z.string()).optional().default([]),
 	hooks: z.object({
 		postSetup: z.string().optional(),
-		preMerge: z.string().optional(),
-		postMerge: z.string().optional(),
 		preDelete: z.string().optional(),
 		postDelete: z.string().optional(),
 	}),
 });
 
-const GlobalStateSchema = z.object({
-	projects: z.record(z.string(), z.object({
-		basePath: z.string(),
-		portAssignments: z.record(z.string(), z.number()),
-	})),
-});
-
 export class ConfigService {
-	private static readonly PROJECT_CONFIG_FILE = ".grove-config.json";
-	private static readonly GLOBAL_STATE_DIR = join(homedir(), ".grove");
-	private static readonly GLOBAL_STATE_FILE = join(ConfigService.GLOBAL_STATE_DIR, "state.json");
+	private static readonly PROJECT_CONFIG_FILE = ".grove.json";
 
 	static async readProjectConfig(projectPath: string = process.cwd()): Promise<ProjectConfig | null> {
 		const configPath = join(projectPath, ConfigService.PROJECT_CONFIG_FILE);
@@ -60,33 +47,6 @@ export class ConfigService {
 		}
 	}
 
-	static async readGlobalState(): Promise<GlobalState> {
-		try {
-			const file = Bun.file(ConfigService.GLOBAL_STATE_FILE);
-			const exists = await file.exists();
-			
-			if (!exists) {
-				return { projects: {} };
-			}
-
-			const content = await file.json();
-			const parsed = GlobalStateSchema.parse(content);
-			return parsed;
-		} catch (error) {
-			throw new Error(`Failed to read global state: ${error}`);
-		}
-	}
-
-	static async writeGlobalState(state: GlobalState): Promise<void> {
-		try {
-			await ConfigService.ensureGlobalStateDir();
-			const validated = GlobalStateSchema.parse(state);
-			await Bun.write(ConfigService.GLOBAL_STATE_FILE, JSON.stringify(validated, null, 2));
-		} catch (error) {
-			throw new Error(`Failed to write global state: ${error}`);
-		}
-	}
-
 	static async detectPackageManager(projectPath: string = process.cwd()): Promise<PackageManager> {
 		const lockFiles = [
 			{ file: "bun.lockb", manager: "bun" as const },
@@ -113,13 +73,5 @@ export class ConfigService {
 			result += chars.charAt(Math.floor(Math.random() * chars.length));
 		}
 		return result;
-	}
-
-	static async ensureGlobalStateDir(): Promise<void> {
-		try {
-			await mkdir(ConfigService.GLOBAL_STATE_DIR, { recursive: true });
-		} catch (error) {
-			throw new Error(`Failed to create global state directory: ${error}`);
-		}
 	}
 }

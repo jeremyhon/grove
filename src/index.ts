@@ -8,10 +8,9 @@ const program = new Command();
 
 program
 	.name("grove")
-	.description("Git worktree manager with automatic port assignment")
+	.description("Git worktree manager with file syncing and hooks")
 	.version(packageJson.version)
-	.option("-v, --verbose", "enable verbose logging")
-	.option("--dry-run", "show what would be done without executing");
+	.option("-v, --verbose", "enable verbose logging");
 
 program
 	.command("init")
@@ -32,7 +31,7 @@ program
 
 program
 	.command("list")
-	.description("List all worktrees and their assigned ports")
+	.description("List all worktrees and their status")
 	.option("--json", "output as JSON")
 	.action(async (options: CommandOptions & { json?: boolean }) => {
 		const { listCommand } = await import("./commands/list.js");
@@ -40,17 +39,8 @@ program
 	});
 
 program
-	.command("merge")
-	.description("Merge current branch and clean up worktree")
-	.option("--no-hooks", "skip running hooks")
-	.action(async (options: CommandOptions & { hooks?: boolean }) => {
-		const { mergeCommand } = await import("./commands/merge.js");
-		await mergeCommand(options);
-	});
-
-program
 	.command("delete")
-	.description("Delete a worktree and release its port")
+	.description("Delete a worktree")
 	.argument("<path>", "path to worktree to delete")
 	.option("-f, --force", "force deletion without confirmation")
 	.action(async (path: string, options: CommandOptions & { force?: boolean }) => {
@@ -64,6 +54,18 @@ program
 	.action(async (options: CommandOptions) => {
 		const { shellSetupCommand } = await import("./commands/shell-setup.js");
 		await shellSetupCommand(options);
+	});
+
+program
+	.command("migrate-workmux")
+	.description("Migrate workmux YAML config to Grove JSON")
+	.option("-w, --workmux <path>", "path to .workmux.yaml")
+	.option("-g, --global <path>", "path to global workmux config")
+	.option("-o, --output <path>", "output path (default: .grove.json)")
+	.option("-f, --force", "overwrite existing .grove.json")
+	.action(async (options: CommandOptions & { workmux?: string; global?: string; output?: string; force?: boolean }) => {
+		const { migrateWorkmuxCommand } = await import("./commands/migrate-workmux.js");
+		await migrateWorkmuxCommand(options);
 	});
 
 program.parse();

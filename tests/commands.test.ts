@@ -3,21 +3,35 @@ import { join } from "path";
 import { initCommand } from "../src/commands/init.js";
 import { setupCommand } from "../src/commands/setup.js";
 import { listCommand } from "../src/commands/list.js";
-import { mergeCommand } from "../src/commands/merge.js";
 import { deleteCommand } from "../src/commands/delete.js";
-import { setupTestRepo, teardownTestRepo, createMockLogService, mockServices, type TestRepo } from "./test-utils.js";
+import { setupTestRepo, teardownTestRepo, mockServices, type TestRepo } from "./test-utils.js";
 
 let testRepo: TestRepo;
-let mockLogService: ReturnType<typeof createMockLogService>;
 let mockedServices: Awaited<ReturnType<typeof mockServices>>;
+let originalStderr: typeof process.stderr.write;
+let originalStdout: typeof process.stdout.write;
+let stderrOutput: string[];
+let stdoutOutput: string[];
 
 beforeEach(async () => {
 	// Set up clean test repository
 	testRepo = await setupTestRepo();
 	
-	// Set up log service mocking using Bun's mock.module()
-	mockLogService = createMockLogService();
-	mockLogService.setup();
+	// Capture stdout/stderr to keep test output clean
+	originalStderr = process.stderr.write;
+	originalStdout = process.stdout.write;
+	stderrOutput = [];
+	stdoutOutput = [];
+
+	process.stderr.write = mock((chunk: any) => {
+		stderrOutput.push(chunk.toString());
+		return true;
+	}) as any;
+
+	process.stdout.write = mock((chunk: any) => {
+		stdoutOutput.push(chunk.toString());
+		return true;
+	}) as any;
 	
 	// Mock other services to prevent side effects
 	mockedServices = await mockServices();
@@ -25,8 +39,9 @@ beforeEach(async () => {
 
 afterEach(async () => {
 	// Restore mocks
-	mockLogService.teardown();
 	mockedServices.restore();
+	process.stderr.write = originalStderr;
+	process.stdout.write = originalStdout;
 	
 	// Clean up test repository
 	await testRepo.cleanup();
@@ -39,7 +54,7 @@ afterAll(async () => {
 
 test("initCommand - initializes grove configuration", async () => {
 	// Test repo is already initialized, but we can test re-initialization
-	const options = { verbose: true, dryRun: false };
+	const options = { verbose: true };
 	
 	try {
 		await initCommand(options);
@@ -57,7 +72,7 @@ test("setupCommand - creates worktree successfully", async () => {
 	await setupCommand(feature, options);
 	
 	// Verify worktree was created
-	const featurePath = join(testRepo.path, "../grove-test-repo-new-feature");
+	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/new-feature");
 	const { FileService } = await import("../src/services/file.service.js");
 	expect(await FileService.pathExists(featurePath)).toBe(true);
 });
@@ -69,58 +84,7 @@ test("listCommand - lists worktrees successfully", async () => {
 	await listCommand(options);
 	
 	// Check that JSON output was logged to stdout
-	expect(mockLogService.hasLogCall("stdout", "grove-test-repo")).toBe(true);
-});
-
-test("mergeCommand - cannot merge from main branch", async () => {
-	const options = { verbose: false, hooks: false };
-	
-	try {
-		await mergeCommand(options);
-		expect.unreachable();
-	} catch (error) {
-		expect((error as Error).message).toContain("Cannot merge from main branch");
-	}
-});
-
-test("mergeCommand - runs postMerge hook when enabled", async () => {
-	let hookCalled = false;
-	let hookName = "";
-	
-	// Override the mocked services to track hook calls
-	const { HookService } = await import("../src/services/hook.service.js");
-	const originalRunHook = HookService.runHook;
-	HookService.runHook = mock(async (name, config, context) => {
-		if (name === "postMerge") {
-			hookCalled = true;
-			hookName = name;
-		}
-		return Promise.resolve();
-	});
-	
-	try {
-		// Create a feature worktree
-		await setupCommand("test-feature", { verbose: false });
-		
-		// Move to feature worktree
-		const featurePath = join(testRepo.path, "../grove-test-repo-test-feature");
-		process.chdir(featurePath);
-		
-		// Make a commit in the feature branch
-		await Bun.write("feature.txt", "Feature file");
-		await Bun.$`git add .`.quiet();
-		await Bun.$`git commit -m "Add feature"`.quiet();
-		
-		// Run merge command (this should succeed and call postMerge hook)
-		await mergeCommand({ verbose: false, hooks: true });
-		
-		// Verify the hook was called
-		expect(hookCalled).toBe(true);
-		expect(hookName).toBe("postMerge");
-	} finally {
-		// Restore original method
-		HookService.runHook = originalRunHook;
-	}
+	expect(stdoutOutput.join("")).toContain("grove-test-repo");
 });
 
 test("deleteCommand - validates path exists", async () => {
@@ -140,7 +104,7 @@ test("deleteCommand - resolves feature name to worktree path", async () => {
 	await setupCommand("test-feature", { verbose: false });
 	
 	// Verify the worktree was created at the expected path
-	const featurePath = join(testRepo.path, "../grove-test-repo-test-feature");
+	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/test-feature");
 	const { FileService } = await import("../src/services/file.service.js");
 	expect(await FileService.pathExists(featurePath)).toBe(true);
 	
@@ -156,7 +120,7 @@ test("deleteCommand - accepts full worktree path", async () => {
 	await setupCommand("another-feature", { verbose: false });
 	
 	// Get the full path to the worktree
-	const featurePath = join(testRepo.path, "../grove-test-repo-another-feature");
+	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/another-feature");
 	const { FileService } = await import("../src/services/file.service.js");
 	expect(await FileService.pathExists(featurePath)).toBe(true);
 	
@@ -175,7 +139,7 @@ test("deleteCommand - shows both attempted paths in error message for non-existe
 		const errorMessage = (error as Error).message;
 		expect(errorMessage).toContain("Path does not exist: non-existent-feature");
 		expect(errorMessage).toContain("grove-test-repo/non-existent-feature");
-		expect(errorMessage).toContain("grove-test-repo-non-existent-feature");
+		expect(errorMessage).toContain("grove-test-repo__worktrees/non-existent-feature");
 	}
 });
 
@@ -184,11 +148,11 @@ test("full workflow - setup, list", async () => {
 	await setupCommand("test-feature", { verbose: false });
 	
 	// Verify feature worktree was created
-	const featurePath = join(testRepo.path, "../grove-test-repo-test-feature");
+	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/test-feature");
 	const { FileService } = await import("../src/services/file.service.js");
 	expect(await FileService.pathExists(featurePath)).toBe(true);
 	
 	// List worktrees and verify output
 	await listCommand({ verbose: false, json: true });
-	expect(mockLogService.hasLogCall("stdout", "test-feature")).toBe(true);
+	expect(stdoutOutput.join("")).toContain("test-feature");
 });

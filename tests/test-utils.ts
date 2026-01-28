@@ -1,7 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "path";
-import { mock } from "bun:test";
 import { initCommand } from "../src/commands/init.js";
+import { mock } from "bun:test";
 
 export interface TestRepo {
 	path: string;
@@ -80,92 +80,20 @@ export async function teardownTestRepo(testRepoPath?: string, originalCwd?: stri
 	// Remove test repository
 	await rm(repoPath, { recursive: true, force: true });
 
-	// Clean up Grove global state
-	await rm(join(process.env.HOME!, ".grove"), { recursive: true, force: true });
-
 	// Clean up any worktree directories
 	await cleanupWorktreeDirectories(cwd);
 }
 
 /**
- * Cleans up any worktree directories that match the test repo pattern
+ * Cleans up any worktree directories for the test repo
  */
 async function cleanupWorktreeDirectories(basePath: string): Promise<void> {
 	try {
-		// Look for directories matching pattern: grove-test-repo-*
-		// They get created at the same level as the test repo (not in parent dir)
-		const entries = await Bun.$`find ${basePath} -maxdepth 1 -name "${TEST_REPO_NAME}-*" -type d 2>/dev/null || true`.text();
-		if (entries.trim()) {
-			for (const dir of entries.trim().split('\n').filter(Boolean)) {
-				await rm(dir, { recursive: true, force: true });
-			}
-		}
+		const worktreeRoot = join(basePath, `${TEST_REPO_NAME}__worktrees`);
+		await rm(worktreeRoot, { recursive: true, force: true });
 	} catch {
 		// Ignore find errors - directories might not exist
 	}
-}
-
-/**
- * Create a mock log service using Bun's native mock.module()
- * This follows the conventional ESM mocking pattern in Bun
- */
-export function createMockLogService() {
-	// Track method calls for assertions
-	const logCalls: { method: string; message: string }[] = [];
-	
-	// Create mock log service
-	const mockLogService = {
-		log: mock((message: string) => logCalls.push({ method: "log", message })),
-		verbose: mock((message: string) => logCalls.push({ method: "verbose", message })),
-		success: mock((message: string) => logCalls.push({ method: "success", message })),
-		error: mock((message: string) => logCalls.push({ method: "error", message })),
-		warn: mock((message: string) => logCalls.push({ method: "warn", message })),
-		info: mock((message: string) => logCalls.push({ method: "info", message })),
-		debug: mock((message: string) => logCalls.push({ method: "debug", message })),
-		stdout: mock((message: string) => logCalls.push({ method: "stdout", message })),
-		spinner: mock((text: string) => {
-			logCalls.push({ method: "spinner", message: text });
-			// Return a mock spinner that doesn't actually spin
-			return {
-				start: () => {},
-				stop: () => {},
-				succeed: () => {},
-				fail: () => {},
-				isSpinning: false
-			};
-		}),
-		stopSpinner: mock(() => logCalls.push({ method: "stopSpinner", message: "" }))
-	};
-	
-	return {
-		logCalls,
-		mockLogService,
-		// Setup using Bun's conventional mock.module() approach
-		setup: () => {
-			mock.module("../src/services/log.service.js", () => ({
-				createLogService: mock(() => mockLogService),
-				LogService: mock().mockImplementation(() => mockLogService)
-			}));
-			
-			// Clear previous calls
-			logCalls.length = 0;
-		},
-		teardown: () => {
-			// Bun automatically restores mocks between tests, but we can be explicit
-			mock.restore();
-		},
-		// Helper methods for assertions
-		hasLogCall: (method: string, messageContains?: string) => {
-			return logCalls.some(call => 
-				call.method === method && 
-				(!messageContains || call.message.includes(messageContains))
-			);
-		},
-		getLogCalls: (method?: string) => {
-			return method ? logCalls.filter(call => call.method === method) : logCalls;
-		},
-		clearCalls: () => { logCalls.length = 0; }
-	};
 }
 
 /**

@@ -86,7 +86,7 @@ Grove uses separate `src/` and `tests/` directories for optimal CLI tool distrib
 Initializes Grove configuration for a git project:
 - Generates unique project ID (`proj_xxxxxxxx`)
 - Auto-detects package manager from lockfiles (bun, yarn, pnpm, npm)
-- Creates `.grove-config.json` with sensible defaults
+- Creates `.grove.json` with sensible defaults
 - Initializes global state in `~/.grove/state.json`
 - Validates git repository and prevents double initialization
 
@@ -126,7 +126,7 @@ Deletes a worktree and releases its assigned port:
 
 ## Configuration System
 
-### Project Config (`.grove-config.json`)
+### Project Config (`.grove.json`)
 ```json
 {
   "projectId": "proj_fi0a42hf",
