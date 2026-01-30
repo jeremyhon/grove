@@ -2,6 +2,19 @@ import type { WorktreeInfo } from "../types.js";
 import type { LogService } from "./log.service.js";
 
 export class GitService {
+	private static formatShellError(error: unknown): string {
+		const err = error as {
+			message?: string;
+			exitCode?: number;
+			stdout?: { toString: () => string };
+			stderr?: { toString: () => string };
+		};
+		const stderr = err?.stderr?.toString?.().trim?.() ?? "";
+		const stdout = err?.stdout?.toString?.().trim?.() ?? "";
+		const message = (err?.message ?? "").toString().trim();
+		const detail = stderr || stdout || message || "Unknown error";
+		return typeof err?.exitCode === "number" ? `${detail} (exit code ${err.exitCode})` : detail;
+	}
 	static async isGitRepository(path: string = process.cwd()): Promise<boolean> {
 		try {
 			const result = await Bun.$`git -C ${path} rev-parse --git-dir`.quiet();
@@ -179,17 +192,21 @@ export class GitService {
 		
 		try {
 			log?.verbose(`Removing worktree at ${path}`);
-			const result = await Bun.$`git -C ${basePath} worktree remove ${path}`.quiet();
+			const result = await Bun.$`git -C ${basePath} worktree remove ${path}`.quiet().nothrow();
 			if (result.exitCode !== 0) {
 				spinner?.fail();
-				throw new Error(`Failed to delete worktree: ${result.stderr.toString()}`);
+				const stderr = result.stderr.toString().trim();
+				const stdout = result.stdout.toString().trim();
+				const message = stderr || stdout || `exit code ${result.exitCode}`;
+				throw new Error(message);
 			}
 			
 			spinner?.succeed();
 			log?.verbose(`Worktree deleted successfully`);
 		} catch (error) {
 			spinner?.fail();
-			throw new Error(`Failed to delete worktree: ${error}`);
+			const message = GitService.formatShellError(error);
+			throw new Error(`Failed to delete worktree: ${message}`);
 		}
 	}
 
@@ -208,7 +225,16 @@ export class GitService {
 				spinner?.fail();
 				const stderr = result.stderr.toString().trim();
 				const stdout = result.stdout.toString().trim();
-				const message = stderr || stdout || `exit code ${result.exitCode}`;
+				let message = stderr || stdout || `exit code ${result.exitCode}`;
+				try {
+					const worktrees = await GitService.getWorktrees(path);
+					const active = worktrees.filter(worktree => worktree.branch === branch).map(worktree => worktree.path);
+					if (active.length > 0) {
+						message = `${message} (branch checked out at: ${active.join(", ")})`;
+					}
+				} catch {
+					// Ignore worktree lookup failures
+				}
 				throw new Error(message);
 			}
 
@@ -216,7 +242,7 @@ export class GitService {
 			log?.verbose(`Local branch '${branch}' deleted successfully`);
 		} catch (error) {
 			spinner?.fail();
-			const message = error instanceof Error && error.message ? error.message : String(error);
+			const message = GitService.formatShellError(error);
 			throw new Error(`Failed to delete local branch: ${message}`);
 		}
 	}
@@ -275,7 +301,7 @@ export class GitService {
 				throw new Error(message);
 			}
 		} catch (error) {
-			const message = error instanceof Error && error.message ? error.message : String(error);
+			const message = GitService.formatShellError(error);
 			throw new Error(`Failed to prune worktrees: ${message}`);
 		}
 	}

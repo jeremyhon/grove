@@ -52,6 +52,7 @@ export async function pruneCommand(options: CommandOptions & { force?: boolean; 
 
 	const candidates = worktrees.filter(worktree => !worktree.isMain);
 	const prunable: typeof candidates = [];
+	const skippedDirty: string[] = [];
 
 	for (const worktree of candidates) {
 		if (!worktree.branch) {
@@ -99,6 +100,8 @@ export async function pruneCommand(options: CommandOptions & { force?: boolean; 
 		const isClean = await GitService.isWorktreeClean(worktree.path);
 		if (!isClean && !force) {
 			log.warn(`Worktree has uncommitted changes: ${worktree.path}`);
+			skippedDirty.push(worktree.path);
+			continue;
 		}
 
 		await HookService.runHook("preDelete", config, {
@@ -126,4 +129,7 @@ export async function pruneCommand(options: CommandOptions & { force?: boolean; 
 	}
 
 	log.success(`Pruned ${prunable.length} merged worktree${prunable.length === 1 ? "" : "s"}`);
+	if (skippedDirty.length > 0) {
+		log.info(`Skipped ${skippedDirty.length} worktree${skippedDirty.length === 1 ? "" : "s"} with uncommitted changes`);
+	}
 }
