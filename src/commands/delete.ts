@@ -140,6 +140,13 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 		// Delete the worktree
 		await GitService.deleteWorktree(targetPath, mainWorktree.path, log);
 
+		// Prune stale worktree metadata before deleting the branch
+		try {
+			await GitService.pruneWorktrees(mainWorktree.path);
+		} catch (error) {
+			log.warn(`Failed to prune worktrees: ${error}`);
+		}
+
 		// Delete the local branch (safe since it's merged)
 		await GitService.deleteLocalBranch(currentBranch, mainWorktree.path, log, force);
 

@@ -206,7 +206,10 @@ export class GitService {
 			const result = await Bun.$`git -C ${path} branch ${flag} ${branch}`.quiet().nothrow();
 			if (result.exitCode !== 0) {
 				spinner?.fail();
-				throw new Error(result.stderr.toString());
+				const stderr = result.stderr.toString().trim();
+				const stdout = result.stdout.toString().trim();
+				const message = stderr || stdout || `exit code ${result.exitCode}`;
+				throw new Error(message);
 			}
 
 			spinner?.succeed();
@@ -258,6 +261,17 @@ export class GitService {
 			}
 		} catch (error) {
 			throw new Error(`Failed to fetch: ${error}`);
+		}
+	}
+
+	static async pruneWorktrees(path: string = process.cwd()): Promise<void> {
+		try {
+			const result = await Bun.$`git -C ${path} worktree prune`.quiet().nothrow();
+			if (result.exitCode !== 0) {
+				throw new Error(result.stderr.toString());
+			}
+		} catch (error) {
+			throw new Error(`Failed to prune worktrees: ${error}`);
 		}
 	}
 
