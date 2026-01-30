@@ -30,6 +30,15 @@ program
 	});
 
 program
+	.command("checkout")
+	.description("Resolve a worktree path for shell checkout")
+	.argument("<target>", "worktree path or branch name")
+	.action(async (target: string, options: CommandOptions) => {
+		const { checkoutCommand } = await import("./commands/checkout.js");
+		await checkoutCommand(target, options);
+	});
+
+program
 	.command("list")
 	.description("List all worktrees and their status")
 	.option("--json", "output as JSON")

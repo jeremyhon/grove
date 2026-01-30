@@ -125,6 +125,11 @@ Deletes a worktree (defaults to current worktree) and its local branch, only if 
 - Runs `preDelete` and `postDelete` hooks
 - Safely removes worktree and deletes local branch (forced with `--force`)
 
+### `grove checkout <target> [--verbose]`
+Resolves a worktree path by branch name or full path:
+- Outputs the worktree path for shell integration
+- Useful with `cd $(grove checkout <branch>)`
+
 ### `grove prune [--force] [--dry-run] [--verbose]`
 Deletes all merged worktrees and their local branches:
 - Fetches latest refs and identifies branches merged into main

@@ -5,6 +5,7 @@ import { setupCommand } from "../src/commands/setup.js";
 import { listCommand } from "../src/commands/list.js";
 import { deleteCommand } from "../src/commands/delete.js";
 import { pruneCommand } from "../src/commands/prune.js";
+import { checkoutCommand } from "../src/commands/checkout.js";
 import { setupTestRepo, teardownTestRepo, mockServices, type TestRepo } from "./test-utils.js";
 
 let testRepo: TestRepo;
@@ -76,6 +77,18 @@ test("setupCommand - creates worktree successfully", async () => {
 	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/new-feature");
 	const { FileService } = await import("../src/services/file.service.js");
 	expect(await FileService.pathExists(featurePath)).toBe(true);
+});
+
+test("checkoutCommand - resolves worktree path by branch", async () => {
+	const feature = "checkout-feature";
+	await setupCommand(feature, { verbose: false });
+
+	const featurePath = join(testRepo.path, `../grove-test-repo__worktrees/${feature}`);
+	stdoutOutput.length = 0;
+
+	await checkoutCommand(feature, { verbose: false });
+
+	expect(stdoutOutput.join("")).toContain(featurePath);
 });
 
 test("listCommand - lists worktrees successfully", async () => {

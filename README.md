@@ -100,6 +100,9 @@ Create a new worktree for feature development. Sanitizes feature names, copies/s
 ### `grove list`
 Display all worktrees with their branches and status. Supports `--json` output for scripting.
 
+### `grove checkout <target>`
+Resolve a worktree path (by branch name or full path) for shell checkout. When shell integration is installed, `grove checkout <branch>` will `cd` into the worktree.
+
 ### `grove delete [path]`
 Safely delete a worktree (defaults to current worktree), only if its branch is merged. Deletes the local branch after removing the worktree. Use `--force` to bypass the merge check and force-delete the local branch.
 

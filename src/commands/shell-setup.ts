@@ -8,7 +8,7 @@ const SHELL_SCRIPT_CONTENT = `# Grove Shell Integration
 # This script provides automatic directory changing for grove commands
 
 grove() {
-  if [ "$1" = "setup" ]; then
+  if [ "$1" = "setup" ] || [ "$1" = "checkout" ]; then
     local output=$(command grove "$@")
     local exit_code=$?
     if [ $exit_code -eq 0 ] && [ -d "$output" ]; then
@@ -31,13 +31,27 @@ if type compdef >/dev/null 2>&1; then
     commands=(
       'init:Initialize Grove configuration for a git project'
       'setup:Create a new worktree for feature development'
+      'checkout:Switch to a worktree by path or branch name'
       'list:List all worktrees with information'
       'delete:Delete a worktree'
       'prune:Delete merged worktrees and their local branches'
       'shell-setup:Generate shell integration script'
       'migrate-workmux:Migrate workmux YAML to Grove JSON'
     )
-    _describe 'commands' commands
+
+    if (( CURRENT == 2 )); then
+      _describe 'commands' commands
+      return
+    fi
+
+    case $words[2] in
+      checkout|delete)
+        local -a targets
+        targets=(\${(f)"$(grove list --json 2>/dev/null | sed -n 's/.*\"path\": \"\\(.*\\)\",/\\1/p; s/.*\"branch\": \"\\(.*\\)\",/\\1/p')"})
+        compadd -- $targets
+        return
+        ;;
+    esac
   }
   compdef _grove grove
 fi
