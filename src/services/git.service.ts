@@ -216,7 +216,8 @@ export class GitService {
 			log?.verbose(`Local branch '${branch}' deleted successfully`);
 		} catch (error) {
 			spinner?.fail();
-			throw new Error(`Failed to delete local branch: ${error}`);
+			const message = error instanceof Error && error.message ? error.message : String(error);
+			throw new Error(`Failed to delete local branch: ${message}`);
 		}
 	}
 
@@ -268,10 +269,14 @@ export class GitService {
 		try {
 			const result = await Bun.$`git -C ${path} worktree prune`.quiet().nothrow();
 			if (result.exitCode !== 0) {
-				throw new Error(result.stderr.toString());
+				const stderr = result.stderr.toString().trim();
+				const stdout = result.stdout.toString().trim();
+				const message = stderr || stdout || `exit code ${result.exitCode}`;
+				throw new Error(message);
 			}
 		} catch (error) {
-			throw new Error(`Failed to prune worktrees: ${error}`);
+			const message = error instanceof Error && error.message ? error.message : String(error);
+			throw new Error(`Failed to prune worktrees: ${message}`);
 		}
 	}
 
