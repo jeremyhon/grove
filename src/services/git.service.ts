@@ -300,10 +300,17 @@ export class GitService {
 	}
 
 	static sanitizeBranchName(name: string): string {
-		return name
-			.toLowerCase()
-			.replace(/[^a-z0-9-]/g, "-")
-			.replace(/-+/g, "-")
-			.replace(/^-|-$/g, "");
+		const normalized = name.toLowerCase().trim();
+		const parts = normalized
+			.split("/")
+			.map(part =>
+				part
+					.replace(/[^a-z0-9-]/g, "-")
+					.replace(/-+/g, "-")
+					.replace(/^-|-$/g, ""),
+			)
+			.filter(Boolean);
+
+		return parts.join("/");
 	}
 }

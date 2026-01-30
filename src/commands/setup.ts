@@ -1,4 +1,4 @@
-import { join } from "path";
+import { join, dirname } from "path";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
 import { FileService } from "../services/file.service.js";
@@ -27,6 +27,7 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 	// Create target directory path
 	const worktreeRoot = join(projectPath, `../${config.project}__worktrees`);
 	const targetPath = join(worktreeRoot, branchName);
+	const targetParent = dirname(targetPath);
 	
 	// Check if target directory already exists
 	if (await FileService.pathExists(targetPath)) {
@@ -39,7 +40,7 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 		await GitService.fetchRemote(projectPath);
 
 		// Create worktree
-		await FileService.createDirectory(worktreeRoot);
+		await FileService.createDirectory(targetParent);
 		await GitService.createWorktree(targetPath, branchName, projectPath, log);
 		
 		// Copy files
