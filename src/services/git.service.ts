@@ -11,6 +11,18 @@ export class GitService {
 		}
 	}
 
+	static async getRepoRoot(path: string = process.cwd()): Promise<string> {
+		try {
+			const result = await Bun.$`git -C ${path} rev-parse --show-toplevel`.quiet();
+			if (result.exitCode !== 0) {
+				throw new Error(result.stderr.toString());
+			}
+			return result.stdout.toString().trim();
+		} catch (error) {
+			throw new Error(`Failed to get repository root: ${error}`);
+		}
+	}
+
 	static async getCurrentBranch(path: string = process.cwd()): Promise<string> {
 		try {
 			const result = await Bun.$`git -C ${path} branch --show-current`.quiet();

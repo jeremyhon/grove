@@ -87,6 +87,23 @@ test("listCommand - lists worktrees successfully", async () => {
 	expect(stdoutOutput.join("")).toContain("grove-test-repo");
 });
 
+test("listCommand - works from a worktree directory", async () => {
+	await setupCommand("list-from-worktree", { verbose: false });
+
+	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/list-from-worktree");
+	const originalCwd = process.cwd();
+	stdoutOutput.length = 0;
+
+	process.chdir(featurePath);
+
+	try {
+		await listCommand({ verbose: false, json: true });
+		expect(stdoutOutput.join("")).toContain("list-from-worktree");
+	} finally {
+		process.chdir(originalCwd);
+	}
+});
+
 test("deleteCommand - validates path exists", async () => {
 	const path = "non-existent-feature";
 	const options = { verbose: false, force: true };

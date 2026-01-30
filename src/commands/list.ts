@@ -13,15 +13,19 @@ export async function listCommand(options: CommandOptions & { json?: boolean }):
 	if (!(await GitService.isGitRepository(projectPath))) {
 		throw new Error("Current directory is not a git repository.");
 	}
-	
-	// Check if grove is initialized
-	const config = await ConfigService.readProjectConfig(projectPath);
+
+	const repoRoot = await GitService.getRepoRoot(projectPath);
+
+	// Get worktrees
+	const worktrees = await GitService.getWorktrees(repoRoot);
+
+	// Check if grove is initialized (prefer main worktree config)
+	const mainWorktree = worktrees.find(worktree => worktree.isMain);
+	const configPath = mainWorktree?.path ?? repoRoot;
+	const config = await ConfigService.readProjectConfig(configPath);
 	if (!config) {
 		throw new Error("Grove not initialized. Run 'grove init' first.");
 	}
-	
-	// Get worktrees
-	const worktrees = await GitService.getWorktrees(projectPath);
 	
 	// Combine data
 	const data = worktrees.map(worktree => ({
