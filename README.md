@@ -103,6 +103,9 @@ Display all worktrees with their branches and status. Supports `--json` output f
 ### `grove delete [path]`
 Safely delete a worktree (defaults to current worktree), only if its branch is merged. Deletes the local branch after removing the worktree. Use `--force` to bypass the merge check and force-delete the local branch.
 
+### `grove prune`
+Delete all merged worktrees and their local branches. Use `--dry-run` to list candidates and `--force` to skip confirmations.
+
 ### `grove migrate-workmux`
 Convert a workmux `.workmux.yaml` into `.grove.json`.
 

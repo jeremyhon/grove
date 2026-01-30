@@ -49,6 +49,16 @@ program
 	});
 
 program
+	.command("prune")
+	.description("Delete merged worktrees and their local branches")
+	.option("-f, --force", "force deletion without confirmation")
+	.option("--dry-run", "list merged worktrees without deleting")
+	.action(async (options: CommandOptions & { force?: boolean; dryRun?: boolean }) => {
+		const { pruneCommand } = await import("./commands/prune.js");
+		await pruneCommand(options);
+	});
+
+program
 	.command("shell-setup")
 	.description("Generate shell integration for automatic directory changing")
 	.action(async (options: CommandOptions) => {

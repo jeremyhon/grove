@@ -33,6 +33,7 @@ if type compdef >/dev/null 2>&1; then
       'setup:Create a new worktree for feature development'
       'list:List all worktrees with information'
       'delete:Delete a worktree'
+      'prune:Delete merged worktrees and their local branches'
       'shell-setup:Generate shell integration script'
       'migrate-workmux:Migrate workmux YAML to Grove JSON'
     )

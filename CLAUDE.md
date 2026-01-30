@@ -125,6 +125,13 @@ Deletes a worktree (defaults to current worktree) and its local branch, only if 
 - Runs `preDelete` and `postDelete` hooks
 - Safely removes worktree and deletes local branch (forced with `--force`)
 
+### `grove prune [--force] [--dry-run] [--verbose]`
+Deletes all merged worktrees and their local branches:
+- Fetches latest refs and identifies branches merged into main
+- Optionally lists candidates without deleting (`--dry-run`)
+- Interactive confirmation prompt (unless `--force` flag used)
+- Runs `preDelete` and `postDelete` hooks per worktree
+
 ## Configuration System
 
 ### Project Config (`.grove.json`)

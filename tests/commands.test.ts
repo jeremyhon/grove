@@ -4,6 +4,7 @@ import { initCommand } from "../src/commands/init.js";
 import { setupCommand } from "../src/commands/setup.js";
 import { listCommand } from "../src/commands/list.js";
 import { deleteCommand } from "../src/commands/delete.js";
+import { pruneCommand } from "../src/commands/prune.js";
 import { setupTestRepo, teardownTestRepo, mockServices, type TestRepo } from "./test-utils.js";
 
 let testRepo: TestRepo;
@@ -162,6 +163,21 @@ test("deleteCommand - force bypasses merge check", async () => {
 	expect(await FileService.pathExists(featurePath)).toBe(false);
 
 	const branchCheck = await Bun.$`git -C ${testRepo.path} show-ref --verify --quiet refs/heads/force-delete-feature`.quiet().nothrow();
+	expect(branchCheck.exitCode).toBeGreaterThan(0);
+});
+
+test("pruneCommand - removes merged worktrees", async () => {
+	await setupCommand("prune-merged-feature", { verbose: false });
+
+	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/prune-merged-feature");
+	const { FileService } = await import("../src/services/file.service.js");
+	expect(await FileService.pathExists(featurePath)).toBe(true);
+
+	await pruneCommand({ verbose: false, force: true });
+
+	expect(await FileService.pathExists(featurePath)).toBe(false);
+
+	const branchCheck = await Bun.$`git -C ${testRepo.path} show-ref --verify --quiet refs/heads/prune-merged-feature`.quiet().nothrow();
 	expect(branchCheck.exitCode).toBeGreaterThan(0);
 });
 
