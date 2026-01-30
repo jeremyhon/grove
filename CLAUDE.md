@@ -115,14 +115,15 @@ Merges the current feature branch back to main and cleans up the worktree:
 - Runs `postMerge` hooks after successful merge
 - Outputs main worktree path for shell integration: `cd $(grove merge)`
 
-### `grove delete <path> [--force] [--verbose]`
-Deletes a worktree and releases its assigned port:
+### `grove delete [path] [--force] [--verbose]`
+Deletes a worktree (defaults to current worktree) and its local branch, only if the branch is merged:
 - Validates target path exists and is a git repository
 - Prevents deletion of main worktree
+- Fetches latest refs and checks branch is merged into main (skipped when `--force`)
 - Warns about uncommitted changes
 - Interactive confirmation prompt (unless `--force` flag used)
 - Runs `preDelete` and `postDelete` hooks
-- Safely removes worktree and releases port assignment
+- Safely removes worktree and deletes local branch (forced with `--force`)
 
 ## Configuration System
 

@@ -41,9 +41,9 @@ program
 program
 	.command("delete")
 	.description("Delete a worktree")
-	.argument("<path>", "path to worktree to delete")
+	.argument("[path]", "path to worktree to delete (defaults to current worktree)")
 	.option("-f, --force", "force deletion without confirmation")
-	.action(async (path: string, options: CommandOptions & { force?: boolean }) => {
+	.action(async (path: string | undefined, options: CommandOptions & { force?: boolean }) => {
 		const { deleteCommand } = await import("./commands/delete.js");
 		await deleteCommand(path, options);
 	});

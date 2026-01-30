@@ -100,8 +100,8 @@ Create a new worktree for feature development. Sanitizes feature names, copies/s
 ### `grove list`
 Display all worktrees with their branches and status. Supports `--json` output for scripting.
 
-### `grove delete <path>`
-Safely delete a worktree with confirmation prompts and cleanup hooks.
+### `grove delete [path]`
+Safely delete a worktree (defaults to current worktree), only if its branch is merged. Deletes the local branch after removing the worktree. Use `--force` to bypass the merge check and force-delete the local branch.
 
 ### `grove migrate-workmux`
 Convert a workmux `.workmux.yaml` into `.grove.json`.

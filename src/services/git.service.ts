@@ -58,6 +58,15 @@ export class GitService {
 		throw new Error("Could not determine main branch");
 	}
 
+	static async isBranchMerged(branch: string, baseBranch: string, path: string = process.cwd()): Promise<boolean> {
+		try {
+			const result = await Bun.$`git -C ${path} merge-base --is-ancestor ${branch} ${baseBranch}`.quiet().nothrow();
+			return result.exitCode === 0;
+		} catch (error) {
+			throw new Error(`Failed to check merge status: ${error}`);
+		}
+	}
+
 	static async getWorktrees(path: string = process.cwd()): Promise<WorktreeInfo[]> {
 		try {
 			const result = await Bun.$`git -C ${path} worktree list --porcelain`.quiet();

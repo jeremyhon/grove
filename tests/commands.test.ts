@@ -148,6 +148,23 @@ test("deleteCommand - accepts full worktree path", async () => {
 	expect(await FileService.pathExists(featurePath)).toBe(false);
 });
 
+test("deleteCommand - force bypasses merge check", async () => {
+	// Create a feature worktree without merging
+	await setupCommand("force-delete-feature", { verbose: false });
+
+	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/force-delete-feature");
+	const { FileService } = await import("../src/services/file.service.js");
+	expect(await FileService.pathExists(featurePath)).toBe(true);
+
+	// Force delete should bypass merge check and remove branch
+	await deleteCommand("force-delete-feature", { verbose: false, force: true });
+
+	expect(await FileService.pathExists(featurePath)).toBe(false);
+
+	const branchCheck = await Bun.$`git -C ${testRepo.path} show-ref --verify --quiet refs/heads/force-delete-feature`.quiet().nothrow();
+	expect(branchCheck.exitCode).toBeGreaterThan(0);
+});
+
 test("deleteCommand - shows both attempted paths in error message for non-existent feature", async () => {
 	try {
 		await deleteCommand("non-existent-feature", { verbose: false, force: true });

@@ -7,29 +7,45 @@ import { FileService } from "../services/file.service.js";
 import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
 
-export async function deleteCommand(path: string, options: CommandOptions & { force?: boolean }): Promise<void> {
+export async function deleteCommand(path: string | undefined, options: CommandOptions & { force?: boolean }): Promise<void> {
 	const log = createLogService({ verbose: options.verbose ?? false });
 	const force = options.force || false;
 	const projectPath = process.cwd();
 
 	try {
-		// First, try to resolve the path directly
-		let targetPath = resolve(path);
-		
-		// If the direct path doesn't exist, try to construct the worktree path
-		if (!(await FileService.pathExists(targetPath))) {
-			// Load project config to get project name
-			const config = await ConfigService.readProjectConfig(projectPath);
-			if (!config) {
-				throw new Error("No Grove configuration found. Run 'grove init' first");
+		let targetPath: string;
+
+		if (!path) {
+			if (!(await GitService.isGitRepository(projectPath))) {
+				throw new Error("Current directory is not a git repository.");
 			}
-			
-			// Try constructing the worktree path using the same pattern as setup
-			const possiblePath = resolve(projectPath, `../${config.project}__worktrees/${path}`);
-			if (await FileService.pathExists(possiblePath)) {
-				targetPath = possiblePath;
+			targetPath = await GitService.getRepoRoot(projectPath);
+		} else {
+			// First, try to resolve the path directly
+			const resolvedPath = resolve(path);
+
+			if (await FileService.pathExists(resolvedPath)) {
+				if (!(await GitService.isGitRepository(resolvedPath))) {
+					throw new Error("Target path is not a git repository");
+				}
+				targetPath = await GitService.getRepoRoot(resolvedPath);
 			} else {
-				throw new Error(`Path does not exist: ${path}. Tried both '${resolve(path)}' and '${possiblePath}'`);
+				// Load project config to get project name
+				const config = await ConfigService.readProjectConfig(projectPath);
+				if (!config) {
+					throw new Error("No Grove configuration found. Run 'grove init' first");
+				}
+
+				// Try constructing the worktree path using the same pattern as setup
+				const possiblePath = resolve(projectPath, `../${config.project}__worktrees/${path}`);
+				if (await FileService.pathExists(possiblePath)) {
+					if (!(await GitService.isGitRepository(possiblePath))) {
+						throw new Error("Target path is not a git repository");
+					}
+					targetPath = await GitService.getRepoRoot(possiblePath);
+				} else {
+					throw new Error(`Path does not exist: ${path}. Tried both '${resolve(path)}' and '${possiblePath}'`);
+				}
 			}
 		}
 
@@ -64,6 +80,27 @@ export async function deleteCommand(path: string, options: CommandOptions & { fo
 			throw new Error("Cannot delete the main worktree");
 		}
 
+		let mergeTarget = mainBranch;
+		if (!force) {
+			log.verbose("Fetching latest refs from origin");
+			await GitService.fetchRemote(mainWorktree.path);
+
+			try {
+				const remoteCheck = await Bun.$`git -C ${mainWorktree.path} show-ref --verify --quiet refs/remotes/origin/${mainBranch}`.quiet().nothrow();
+				if (remoteCheck.exitCode === 0) {
+					mergeTarget = `origin/${mainBranch}`;
+				}
+			} catch {
+				// Ignore remote check errors and fall back to local branch
+			}
+
+			const isMerged = await GitService.isBranchMerged(currentBranch, mergeTarget, mainWorktree.path);
+			if (!isMerged) {
+				log.warn(`Branch '${currentBranch}' is not merged into ${mergeTarget}. Aborting delete.`);
+				return;
+			}
+		}
+
 		// Load project config (we may have already loaded it above for path resolution)
 		const config = await ConfigService.readProjectConfig(mainWorktree.path);
 		if (!config) {
@@ -81,7 +118,7 @@ export async function deleteCommand(path: string, options: CommandOptions & { fo
 			const response = await prompts({
 				type: "confirm",
 				name: "confirm",
-				message: `Delete worktree at '${targetPath}' (branch: ${currentBranch})?`,
+				message: `Delete worktree at '${targetPath}' and local branch '${currentBranch}'?`,
 				initial: false,
 			});
 
@@ -102,6 +139,9 @@ export async function deleteCommand(path: string, options: CommandOptions & { fo
 
 		// Delete the worktree
 		await GitService.deleteWorktree(targetPath, mainWorktree.path, log);
+
+		// Delete the local branch (safe since it's merged)
+		await GitService.deleteLocalBranch(currentBranch, mainWorktree.path, log, force);
 
 		// Run postDelete hook
 		await HookService.runHook("postDelete", config, {
