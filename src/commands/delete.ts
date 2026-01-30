@@ -30,14 +30,23 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 				}
 				targetPath = await GitService.getRepoRoot(resolvedPath);
 			} else {
+				if (!(await GitService.isGitRepository(projectPath))) {
+					throw new Error("Current directory is not a git repository.");
+				}
+
+				const repoRoot = await GitService.getRepoRoot(projectPath);
+				const worktrees = await GitService.getWorktrees(repoRoot);
+				const mainWorktree = worktrees.find(worktree => worktree.isMain);
+				const configPath = mainWorktree?.path ?? repoRoot;
+
 				// Load project config to get project name
-				const config = await ConfigService.readProjectConfig(projectPath);
+				const config = await ConfigService.readProjectConfig(configPath);
 				if (!config) {
 					throw new Error("No Grove configuration found. Run 'grove init' first");
 				}
 
 				// Try constructing the worktree path using the same pattern as setup
-				const possiblePath = resolve(projectPath, `../${config.project}__worktrees/${path}`);
+				const possiblePath = resolve(configPath, `../${config.project}__worktrees/${path}`);
 				if (await FileService.pathExists(possiblePath)) {
 					if (!(await GitService.isGitRepository(possiblePath))) {
 						throw new Error("Target path is not a git repository");
