@@ -96,21 +96,35 @@ export class GitService {
 		const spinner = log?.spinner(`Creating worktree for branch '${branch}'`);
 		
 		try {
-			// Check if branch already exists
-			log?.verbose(`Checking if branch '${branch}' exists`);
-			let branchExists = false;
+			// Check if branch already exists locally
+			log?.verbose(`Checking if branch '${branch}' exists locally`);
+			let localBranchExists = false;
 			try {
-				const branchCheck = await Bun.$`git -C ${basePath} rev-parse --verify ${branch}`.quiet();
-				branchExists = branchCheck.exitCode === 0;
+				const branchCheck = await Bun.$`git -C ${basePath} show-ref --verify --quiet refs/heads/${branch}`.quiet();
+				localBranchExists = branchCheck.exitCode === 0;
 			} catch {
-				// Branch doesn't exist
+				// Local branch doesn't exist
+			}
+
+			// Check if branch exists on origin remote
+			log?.verbose(`Checking if branch '${branch}' exists on origin remote`);
+			let remoteBranchExists = false;
+			try {
+				const remoteCheck = await Bun.$`git -C ${basePath} show-ref --verify --quiet refs/remotes/origin/${branch}`.quiet();
+				remoteBranchExists = remoteCheck.exitCode === 0;
+			} catch {
+				// Remote branch doesn't exist
 			}
 			
 			let result;
-			if (branchExists) {
-				// Branch exists, create worktree without -b flag
-				log?.verbose(`Branch '${branch}' exists, creating worktree`);
+			if (localBranchExists) {
+				// Local branch exists, create worktree without -b flag
+				log?.verbose(`Local branch '${branch}' exists, creating worktree`);
 				result = await Bun.$`git -C ${basePath} worktree add ${path} ${branch}`.quiet();
+			} else if (remoteBranchExists) {
+				// Remote branch exists, create local branch from remote and add worktree
+				log?.verbose(`Remote branch '${branch}' exists on origin, creating worktree from origin/${branch}`);
+				result = await Bun.$`git -C ${basePath} worktree add ${path} -b ${branch} origin/${branch}`.quiet();
 			} else {
 				// Branch doesn't exist, create it with -b flag
 				log?.verbose(`Creating new branch '${branch}' and worktree`);
@@ -120,6 +134,15 @@ export class GitService {
 			if (result.exitCode !== 0) {
 				spinner?.fail();
 				throw new Error(`Failed to create worktree: ${result.stderr.toString()}`);
+			}
+
+			if (remoteBranchExists && !localBranchExists) {
+				log?.verbose(`Setting upstream of '${branch}' to origin/${branch}`);
+				const upstreamResult = await Bun.$`git -C ${basePath} branch --set-upstream-to=origin/${branch} ${branch}`.quiet();
+				if (upstreamResult.exitCode !== 0) {
+					spinner?.fail();
+					throw new Error(`Failed to set upstream: ${upstreamResult.stderr.toString()}`);
+				}
 			}
 			
 			spinner?.succeed();
@@ -149,6 +172,30 @@ export class GitService {
 		}
 	}
 
+	static async deleteLocalBranch(
+		branch: string,
+		path: string = process.cwd(),
+		log?: LogService,
+		force: boolean = false,
+	): Promise<void> {
+		const spinner = log?.spinner(`Deleting local branch '${branch}'`);
+
+		try {
+			const flag = force ? "-D" : "-d";
+			const result = await Bun.$`git -C ${path} branch ${flag} ${branch}`.quiet().nothrow();
+			if (result.exitCode !== 0) {
+				spinner?.fail();
+				throw new Error(result.stderr.toString());
+			}
+
+			spinner?.succeed();
+			log?.verbose(`Local branch '${branch}' deleted successfully`);
+		} catch (error) {
+			spinner?.fail();
+			throw new Error(`Failed to delete local branch: ${error}`);
+		}
+	}
+
 	static async isWorktreeClean(path: string): Promise<boolean> {
 		try {
 			const result = await Bun.$`git -C ${path} status --porcelain`.quiet();
@@ -175,6 +222,21 @@ export class GitService {
 			}
 		} catch (error) {
 			throw new Error(`Failed to pull latest: ${error}`);
+		}
+	}
+
+	static async fetchRemote(path: string = process.cwd(), remote: string = "origin"): Promise<void> {
+		try {
+			const remoteCheck = await Bun.$`git -C ${path} remote get-url ${remote}`.quiet().nothrow();
+			if (remoteCheck.exitCode !== 0) {
+				return;
+			}
+			const result = await Bun.$`git -C ${path} fetch ${remote}`.quiet().nothrow();
+			if (result.exitCode !== 0) {
+				throw new Error(`Failed to fetch: ${result.stderr.toString()}`);
+			}
+		} catch (error) {
+			throw new Error(`Failed to fetch: ${error}`);
 		}
 	}
 

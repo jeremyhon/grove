@@ -34,6 +34,10 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 	}
 	
 	try {
+		// Sync remote refs before checking branches
+		log.verbose("Fetching latest refs from origin");
+		await GitService.fetchRemote(projectPath);
+
 		// Create worktree
 		await FileService.createDirectory(worktreeRoot);
 		await GitService.createWorktree(targetPath, branchName, projectPath, log);
