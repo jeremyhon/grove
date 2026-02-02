@@ -74,6 +74,15 @@ program
 	});
 
 program
+	.command("doctor")
+	.alias("dr")
+	.description("Check Grove setup and environment")
+	.action(async (options: CommandOptions) => {
+		const { doctorCommand } = await import("./commands/doctor.js");
+		await doctorCommand(options);
+	});
+
+program
 	.command("shell-setup")
 	.alias("ss")
 	.description("Generate shell integration for automatic directory changing")

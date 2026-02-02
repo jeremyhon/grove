@@ -54,6 +54,8 @@ if type compdef >/dev/null 2>&1; then
       'd:Alias for delete'
       'prune:Delete merged worktrees and their local branches'
       'p:Alias for prune'
+      'doctor:Check Grove setup and environment'
+      'dr:Alias for doctor'
       'shell-setup:Generate shell integration script'
       'ss:Alias for shell-setup'
       'migrate-workmux:Migrate workmux YAML to Grove JSON'
@@ -86,7 +88,7 @@ elif type complete >/dev/null 2>&1; then
   _grove_bash() {
     local cur
     cur="\${COMP_WORDS[COMP_CWORD]}"
-    local commands="init i setup s checkout c list l delete d prune p shell-setup ss migrate-workmux mw"
+    local commands="init i setup s checkout c list l delete d prune p doctor dr shell-setup ss migrate-workmux mw"
 
     if [ $COMP_CWORD -eq 1 ]; then
       COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -118,7 +120,8 @@ export async function shellSetupCommand(options: CommandOptions): Promise<void> 
 	const log = createLogService({ verbose: options.verbose ?? false });
 	
 	try {
-		const groveDir = `${homedir()}/.grove`;
+		const homeDir = process.env.HOME || homedir();
+		const groveDir = `${homeDir}/.grove`;
 		const scriptPath = `${groveDir}/grove.sh`;
 		
 		// Detect shell from environment
@@ -128,22 +131,46 @@ export async function shellSetupCommand(options: CommandOptions): Promise<void> 
 		if (shell.includes('zsh')) {
 			shellRcFile = '.zshrc';
 		} else if (shell.includes('bash')) {
-			shellRcFile = '.bashrc';
+			const bashrcPath = `${homeDir}/.bashrc`;
+			const bashProfilePath = `${homeDir}/.bash_profile`;
+			const bashLoginPath = `${homeDir}/.bash_login`;
+			const profilePath = `${homeDir}/.profile`;
+
+			if (await FileService.pathExists(bashrcPath)) {
+				shellRcFile = '.bashrc';
+			} else if (await FileService.pathExists(bashProfilePath)) {
+				shellRcFile = '.bash_profile';
+			} else if (await FileService.pathExists(bashLoginPath)) {
+				shellRcFile = '.bash_login';
+			} else if (await FileService.pathExists(profilePath)) {
+				shellRcFile = '.profile';
+			} else {
+				shellRcFile = '.bashrc';
+			}
 		} else {
 			// Fallback: check which rc file exists
-			const zshrcPath = `${homedir()}/.zshrc`;
-			const bashrcPath = `${homedir()}/.bashrc`;
+			const zshrcPath = `${homeDir}/.zshrc`;
+			const bashrcPath = `${homeDir}/.bashrc`;
+			const bashProfilePath = `${homeDir}/.bash_profile`;
+			const bashLoginPath = `${homeDir}/.bash_login`;
+			const profilePath = `${homeDir}/.profile`;
 			
 			if (await FileService.pathExists(zshrcPath)) {
 				shellRcFile = '.zshrc';
 			} else if (await FileService.pathExists(bashrcPath)) {
 				shellRcFile = '.bashrc';
+			} else if (await FileService.pathExists(bashProfilePath)) {
+				shellRcFile = '.bash_profile';
+			} else if (await FileService.pathExists(bashLoginPath)) {
+				shellRcFile = '.bash_login';
+			} else if (await FileService.pathExists(profilePath)) {
+				shellRcFile = '.profile';
 			} else {
 				shellRcFile = '.zshrc'; // Default to zsh
 			}
 		}
 		
-		const shellRcPath = `${homedir()}/${shellRcFile}`;
+		const shellRcPath = `${homeDir}/${shellRcFile}`;
 
 		// Ensure ~/.grove directory exists
 		await mkdir(groveDir, { recursive: true });

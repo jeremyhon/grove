@@ -33,6 +33,9 @@ grove list
 ### Worktree Management
 Grove creates isolated git worktrees for each feature branch, automatically placing them in `../project__worktrees/<branch>` directories. This keeps your main project clean while allowing parallel feature development. Feature names are sanitized for git safety while preserving case.
 
+### Case Sensitivity
+Git branch names are case-sensitive. Grove preserves case in branch names, but on case-insensitive filesystems (common on macOS) Git may report `core.ignorecase=true`. If you need branches that differ only by case, use a case-sensitive volume. `grove doctor` reports the current setting.
+
 ### File Synchronization
 Grove automatically copies essential files (`.env*`, `.vscode/`, etc.) and can symlink shared files to new worktrees, ensuring consistent development environments across all feature branches.
 
@@ -110,6 +113,9 @@ Safely delete a worktree (defaults to current worktree), only if its branch is m
 
 ### `grove prune` (alias: `p`)
 Delete all merged worktrees and their local branches. Use `--dry-run` to list candidates and `--force` to skip confirmations.
+
+### `grove doctor` (alias: `dr`)
+Check Grove configuration, shell integration, and git settings for common issues.
 
 ### `grove shell-setup` (alias: `ss`)
 Generate shell integration for automatic directory changing and tab completion (zsh + bash).

@@ -1,4 +1,6 @@
 import { test, expect, beforeEach, afterEach, afterAll, mock } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "os";
 import { join } from "path";
 import { initCommand } from "../src/commands/init.js";
 import { setupCommand } from "../src/commands/setup.js";
@@ -6,6 +8,7 @@ import { listCommand } from "../src/commands/list.js";
 import { deleteCommand } from "../src/commands/delete.js";
 import { pruneCommand } from "../src/commands/prune.js";
 import { checkoutCommand } from "../src/commands/checkout.js";
+import { shellSetupCommand } from "../src/commands/shell-setup.js";
 import { setupTestRepo, teardownTestRepo, mockServices, type TestRepo } from "./test-utils.js";
 
 let testRepo: TestRepo;
@@ -162,6 +165,26 @@ test("deleteCommand - accepts full worktree path", async () => {
 	expect(await FileService.pathExists(featurePath)).toBe(false);
 });
 
+test("deleteCommand - returns to main worktree when deleting current worktree", async () => {
+	await setupCommand("delete-from-worktree", { verbose: false });
+
+	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/delete-from-worktree");
+	const { FileService } = await import("../src/services/file.service.js");
+	expect(await FileService.pathExists(featurePath)).toBe(true);
+
+	const originalCwd = process.cwd();
+	stdoutOutput.length = 0;
+	process.chdir(featurePath);
+
+	try {
+		await deleteCommand(undefined, { verbose: false, force: true });
+		expect(process.cwd()).toBe(testRepo.path);
+		expect(stdoutOutput.join("")).toContain(testRepo.path);
+	} finally {
+		process.chdir(originalCwd);
+	}
+});
+
 test("deleteCommand - force bypasses merge check", async () => {
 	// Create a feature worktree without merging
 	await setupCommand("force-delete-feature", { verbose: false });
@@ -202,7 +225,42 @@ test("deleteCommand - shows both attempted paths in error message for non-existe
 		const errorMessage = (error as Error).message;
 		expect(errorMessage).toContain("Path does not exist: non-existent-feature");
 		expect(errorMessage).toContain("grove-test-repo/non-existent-feature");
-		expect(errorMessage).toContain("grove-test-repo__worktrees/non-existent-feature");
+	expect(errorMessage).toContain("grove-test-repo__worktrees/non-existent-feature");
+	}
+});
+
+test("shellSetupCommand - writes bash completion and sources bash_profile", async () => {
+	const tempHome = await mkdtemp(join(tmpdir(), "grove-shell-"));
+	const originalHome = process.env.HOME;
+	const originalShell = process.env.SHELL;
+	const bashProfilePath = join(tempHome, ".bash_profile");
+
+	try {
+		process.env.HOME = tempHome;
+		process.env.SHELL = "/bin/bash";
+		await Bun.write(bashProfilePath, "# test\n");
+
+		await shellSetupCommand({ verbose: false });
+
+		const scriptPath = join(tempHome, ".grove", "grove.sh");
+		const scriptContent = await Bun.file(scriptPath).text();
+		expect(scriptContent).toContain("complete -F _grove_bash grove");
+		expect(scriptContent).toContain("doctor:Check Grove setup and environment");
+
+		const profileContent = await Bun.file(bashProfilePath).text();
+		expect(profileContent).toContain('source "$HOME/.grove/grove.sh"');
+	} finally {
+		if (originalHome === undefined) {
+			delete process.env.HOME;
+		} else {
+			process.env.HOME = originalHome;
+		}
+		if (originalShell === undefined) {
+			delete process.env.SHELL;
+		} else {
+			process.env.SHELL = originalShell;
+		}
+		await rm(tempHome, { recursive: true, force: true });
 	}
 });
 
