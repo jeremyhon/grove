@@ -118,9 +118,9 @@ test("GitService - isWorktreeClean returns false for dirty worktree", async () =
 });
 
 test("GitService - sanitizeBranchName sanitizes branch names", () => {
-	expect(GitService.sanitizeBranchName("Feature/Add New UI")).toBe("feature/add-new-ui");
+	expect(GitService.sanitizeBranchName("Feature/Add New UI")).toBe("Feature/Add-New-UI");
 	expect(GitService.sanitizeBranchName("fix-bug#123")).toBe("fix-bug-123");
-	expect(GitService.sanitizeBranchName("UPPERCASE_NAME")).toBe("uppercase-name");
+	expect(GitService.sanitizeBranchName("UPPERCASE_NAME")).toBe("UPPERCASE-NAME");
 	expect(GitService.sanitizeBranchName("--start-end--")).toBe("start-end");
 });
 

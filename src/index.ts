@@ -14,6 +14,7 @@ program
 
 program
 	.command("init")
+	.alias("i")
 	.description("Initialize Grove configuration for this project")
 	.action(async (options: CommandOptions) => {
 		const { initCommand } = await import("./commands/init.js");
@@ -22,6 +23,7 @@ program
 
 program
 	.command("setup")
+	.alias("s")
 	.description("Set up a new worktree for a feature branch")
 	.argument("<feature>", "feature or branch name")
 	.action(async (feature: string, options: CommandOptions) => {
@@ -31,6 +33,7 @@ program
 
 program
 	.command("checkout")
+	.alias("c")
 	.description("Resolve a worktree path for shell checkout")
 	.argument("<target>", "worktree path or branch name")
 	.action(async (target: string, options: CommandOptions) => {
@@ -40,6 +43,7 @@ program
 
 program
 	.command("list")
+	.alias("l")
 	.description("List all worktrees and their status")
 	.option("--json", "output as JSON")
 	.action(async (options: CommandOptions & { json?: boolean }) => {
@@ -49,6 +53,7 @@ program
 
 program
 	.command("delete")
+	.alias("d")
 	.description("Delete a worktree")
 	.argument("[path]", "path to worktree to delete (defaults to current worktree)")
 	.option("-f, --force", "force deletion without confirmation")
@@ -59,6 +64,7 @@ program
 
 program
 	.command("prune")
+	.alias("p")
 	.description("Delete merged worktrees and their local branches")
 	.option("-f, --force", "force deletion without confirmation")
 	.option("--dry-run", "list merged worktrees without deleting")
@@ -69,6 +75,7 @@ program
 
 program
 	.command("shell-setup")
+	.alias("ss")
 	.description("Generate shell integration for automatic directory changing")
 	.action(async (options: CommandOptions) => {
 		const { shellSetupCommand } = await import("./commands/shell-setup.js");
@@ -77,6 +84,7 @@ program
 
 program
 	.command("migrate-workmux")
+	.alias("mw")
 	.description("Migrate workmux YAML config to Grove JSON")
 	.option("-w, --workmux <path>", "path to .workmux.yaml")
 	.option("-g, --global <path>", "path to global workmux config")

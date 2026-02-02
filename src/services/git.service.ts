@@ -3,6 +3,9 @@ import type { LogService } from "./log.service.js";
 
 export class GitService {
 	private static formatShellError(error: unknown): string {
+		if (typeof error === "string") {
+			return error;
+		}
 		const err = error as {
 			message?: string;
 			exitCode?: number;
@@ -12,8 +15,15 @@ export class GitService {
 		const stderr = err?.stderr?.toString?.().trim?.() ?? "";
 		const stdout = err?.stdout?.toString?.().trim?.() ?? "";
 		const message = (err?.message ?? "").toString().trim();
-		const detail = stderr || stdout || message || "Unknown error";
-		return typeof err?.exitCode === "number" ? `${detail} (exit code ${err.exitCode})` : detail;
+		const detail = stderr || stdout || message;
+		if (detail) {
+			return typeof err?.exitCode === "number" ? `${detail} (exit code ${err.exitCode})` : detail;
+		}
+		const fallback = error ? String(error).trim() : "";
+		if (fallback && fallback !== "[object Object]") {
+			return fallback;
+		}
+		return "Unknown error";
 	}
 	static async isGitRepository(path: string = process.cwd()): Promise<boolean> {
 		try {
@@ -326,12 +336,12 @@ export class GitService {
 	}
 
 	static sanitizeBranchName(name: string): string {
-		const normalized = name.toLowerCase().trim();
+		const normalized = name.trim();
 		const parts = normalized
 			.split("/")
 			.map(part =>
 				part
-					.replace(/[^a-z0-9-]/g, "-")
+					.replace(/[^A-Za-z0-9-]/g, "-")
 					.replace(/-+/g, "-")
 					.replace(/^-|-$/g, ""),
 			)

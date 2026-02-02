@@ -1,5 +1,5 @@
 import prompts from "prompts";
-import { resolve } from "path";
+import { resolve, sep } from "path";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
 import { HookService } from "../services/hook.service.js";
@@ -81,6 +81,24 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 		const mainWorktree = worktrees.find(w => w.isMain);
 		if (!mainWorktree) {
 			throw new Error("Could not find main worktree");
+		}
+		
+		// If we're inside the target worktree, move to the main worktree to avoid invalid cwd errors.
+		let currentCwd: string | undefined;
+		try {
+			currentCwd = process.cwd();
+		} catch {
+			currentCwd = undefined;
+		}
+		const shouldCdToMain =
+			!currentCwd || currentCwd === targetPath || currentCwd.startsWith(`${targetPath}${sep}`);
+		if (shouldCdToMain) {
+			try {
+				process.chdir(mainWorktree.path);
+				log.verbose(`Switched working directory to main worktree: ${mainWorktree.path}`);
+			} catch (error) {
+				throw new Error(`Failed to switch working directory to main worktree: ${error}`);
+			}
 		}
 
 		// Check if we're trying to delete the main worktree
@@ -164,6 +182,10 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 			projectPath: mainWorktree.path,
 			branch: currentBranch,
 		}, log);
+
+		if (shouldCdToMain) {
+			log.stdout(mainWorktree.path);
+		}
 
 		log.verbose(`Successfully deleted worktree '${targetPath}'`);
 		log.success("Worktree deleted successfully");

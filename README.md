@@ -31,7 +31,7 @@ grove list
 ## Core Concepts
 
 ### Worktree Management
-Grove creates isolated git worktrees for each feature branch, automatically placing them in `../project__worktrees/<branch>` directories. This keeps your main project clean while allowing parallel feature development.
+Grove creates isolated git worktrees for each feature branch, automatically placing them in `../project__worktrees/<branch>` directories. This keeps your main project clean while allowing parallel feature development. Feature names are sanitized for git safety while preserving case.
 
 ### File Synchronization
 Grove automatically copies essential files (`.env*`, `.vscode/`, etc.) and can symlink shared files to new worktrees, ensuring consistent development environments across all feature branches.
@@ -42,9 +42,11 @@ Execute custom commands at key workflow points:
 - **preDelete/postDelete**: Custom cleanup or notifications
 
 ### Shell Integration
-Grove outputs clean paths to stdout, enabling seamless directory changes:
+Grove outputs clean paths to stdout, enabling seamless directory changes and tab completion (zsh + bash):
 ```bash
-cd $(grove setup "new feature")  # Jump to new worktree
+grove setup "new feature"   # Jump to new worktree (with shell integration)
+grove checkout "my-branch"  # Jump to an existing worktree
+grove delete -f             # Delete current worktree and return to main
 ```
 
 ## Configuration
@@ -91,25 +93,28 @@ Grove compiles to a single, self-contained binary using `bun build --compile`, m
 
 ## Commands
 
-### `grove init`
+### `grove init` (alias: `i`)
 Initialize Grove configuration for a git project. Auto-detects your package manager and creates sensible defaults.
 
-### `grove setup <feature>`
-Create a new worktree for feature development. Sanitizes feature names, copies/symlinks files, and runs setup hooks.
+### `grove setup <feature>` (alias: `s`)
+Create a new worktree for feature development. Sanitizes feature names (case preserved), copies/symlinks files, and runs setup hooks.
 
-### `grove list`
+### `grove list` (alias: `l`)
 Display all worktrees with their branches and status. Supports `--json` output for scripting.
 
-### `grove checkout <target>`
+### `grove checkout <target>` (alias: `c`)
 Resolve a worktree path (by branch name or full path) for shell checkout. When shell integration is installed, `grove checkout <branch>` will `cd` into the worktree.
 
-### `grove delete [path]`
-Safely delete a worktree (defaults to current worktree), only if its branch is merged. Deletes the local branch after removing the worktree. Use `--force` to bypass the merge check and force-delete the local branch.
+### `grove delete [path]` (alias: `d`)
+Safely delete a worktree (defaults to current worktree), only if its branch is merged. Deletes the local branch after removing the worktree. Use `--force` to bypass the merge check and force-delete the local branch. With shell integration, `grove delete -f` from inside a worktree returns you to the main worktree.
 
-### `grove prune`
+### `grove prune` (alias: `p`)
 Delete all merged worktrees and their local branches. Use `--dry-run` to list candidates and `--force` to skip confirmations.
 
-### `grove migrate-workmux`
+### `grove shell-setup` (alias: `ss`)
+Generate shell integration for automatic directory changing and tab completion (zsh + bash).
+
+### `grove migrate-workmux` (alias: `mw`)
 Convert a workmux `.workmux.yaml` into `.grove.json`.
 
 ## Example Workflow
