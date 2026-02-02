@@ -15,7 +15,12 @@ export class FileService {
 				for (const file of files) {
 					const sourceFile = join(sourcePath, file);
 					const targetFile = join(targetPath, file);
-					
+
+					if (await FileService.isDirectory(sourceFile)) {
+						await FileService.copyDirectory(sourceFile, targetFile);
+						continue;
+					}
+
 					await FileService.copyFile(sourceFile, targetFile);
 				}
 			} catch (error) {

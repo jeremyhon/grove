@@ -71,6 +71,15 @@ test("FileService - copyFiles handles nested directories", async () => {
 	expect(await FileService.pathExists(join(testTargetDir, ".vscode", "launch.json"))).toBe(true);
 });
 
+test("FileService - copyFiles copies directories by name", async () => {
+	await mkdir(join(testSourceDir, "node_modules", "pkg"), { recursive: true });
+	await Bun.write(join(testSourceDir, "node_modules", "pkg", "index.js"), "console.log('ok')");
+
+	await FileService.copyFiles(["node_modules"], testSourceDir, testTargetDir);
+
+	expect(await FileService.pathExists(join(testTargetDir, "node_modules", "pkg", "index.js"))).toBe(true);
+});
+
 test("FileService - copyFiles handles empty patterns gracefully", async () => {
 	await FileService.copyFiles([], testSourceDir, testTargetDir);
 	// Should not throw
