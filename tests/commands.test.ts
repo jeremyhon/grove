@@ -94,6 +94,33 @@ test("checkoutCommand - resolves worktree path by branch", async () => {
 	expect(stdoutOutput.join("")).toContain(featurePath);
 });
 
+test("checkoutCommand - with -b creates a missing worktree", async () => {
+	const feature = "checkout-create";
+	const featurePath = join(testRepo.path, `../grove-test-repo__worktrees/${feature}`);
+	const { FileService } = await import("../src/services/file.service.js");
+	expect(await FileService.pathExists(featurePath)).toBe(false);
+
+	stdoutOutput.length = 0;
+	await checkoutCommand(feature, { verbose: false, create: true });
+
+	expect(await FileService.pathExists(featurePath)).toBe(true);
+	expect(stdoutOutput.join("")).toContain(featurePath);
+});
+
+test("setupCommand - reuses an existing worktree", async () => {
+	const feature = "setup-existing";
+	const featurePath = join(testRepo.path, `../grove-test-repo__worktrees/${feature}`);
+	const { FileService } = await import("../src/services/file.service.js");
+
+	await setupCommand(feature, { verbose: false });
+	expect(await FileService.pathExists(featurePath)).toBe(true);
+
+	stdoutOutput.length = 0;
+	await setupCommand(feature, { verbose: false });
+
+	expect(stdoutOutput.join("")).toContain(featurePath);
+});
+
 test("listCommand - lists worktrees successfully", async () => {
 	const options = { verbose: false, json: true };
 	

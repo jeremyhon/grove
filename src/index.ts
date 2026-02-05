@@ -36,7 +36,8 @@ program
 	.alias("c")
 	.description("Resolve a worktree path for shell checkout")
 	.argument("<target>", "worktree path or branch name")
-	.action(async (target: string, options: CommandOptions) => {
+	.option("-b, --create", "create the worktree when target branch is missing locally")
+	.action(async (target: string, options: CommandOptions & { create?: boolean }) => {
 		const { checkoutCommand } = await import("./commands/checkout.js");
 		await checkoutCommand(target, options);
 	});

@@ -4,10 +4,12 @@ import { GitService } from "../services/git.service.js";
 import { FileService } from "../services/file.service.js";
 import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
+import { setupCommand } from "./setup.js";
 
-export async function checkoutCommand(target: string, options: CommandOptions): Promise<void> {
+export async function checkoutCommand(target: string, options: CommandOptions & { create?: boolean }): Promise<void> {
 	const log = createLogService({ verbose: options.verbose ?? false });
 	const projectPath = process.cwd();
+	const shouldCreate = options.create ?? false;
 
 	if (!(await GitService.isGitRepository(projectPath))) {
 		throw new Error("Current directory is not a git repository.");
@@ -35,6 +37,11 @@ export async function checkoutCommand(target: string, options: CommandOptions): 
 
 		const possiblePath = resolve(configPath, `../${config.project}__worktrees/${target}`);
 		if (!(await FileService.pathExists(possiblePath))) {
+			if (shouldCreate) {
+				log.verbose(`No existing worktree found for '${target}', creating one`);
+				await setupCommand(target, { verbose: options.verbose });
+				return;
+			}
 			throw new Error(`Path does not exist: ${target}. Tried both '${resolvedPath}' and '${possiblePath}'`);
 		}
 		if (!(await GitService.isGitRepository(possiblePath))) {

@@ -52,6 +52,7 @@ grove setup "payroll export"
 ```
 
 This creates a sanitized branch name, creates a worktree, copies/symlinks configured files, runs `postSetup`, and prints the worktree path.
+If the target worktree already exists, Grove reuses it and prints that existing path.
 
 ### Jump to an existing worktree
 
@@ -59,6 +60,8 @@ This creates a sanitized branch name, creates a worktree, copies/symlinks config
 grove checkout payroll-export
 # or
 grove checkout ../myapp__worktrees/payroll-export
+# create it if missing
+grove checkout -b payroll-export
 ```
 
 ### Delete one worktree
@@ -88,7 +91,7 @@ grove doctor
 | --- | --- | --- |
 | `grove init` | `i` | Initialize `.grove.json` in the current git repository |
 | `grove setup <feature>` | `s` | Create a worktree and branch for a feature |
-| `grove checkout <target>` | `c` | Resolve and print a worktree path (used for shell `cd`) |
+| `grove checkout <target> [-b]` | `c` | Resolve and print a worktree path, optionally creating it when missing |
 | `grove list [--json]` | `l` | List worktrees in table or JSON format |
 | `grove delete [path] [-f]` | `d` | Delete one worktree and its local branch |
 | `grove prune [--dry-run] [-f]` | `p` | Delete all merged worktrees and local branches |
