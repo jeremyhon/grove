@@ -98,6 +98,18 @@ test("FileService - symlinkFiles creates symlinks", async () => {
 	expect(content).toBe("LOCAL_VAR=local");
 });
 
+test("FileService - symlinkFiles creates directory symlinks", async () => {
+	await mkdir(join(testSourceDir, "node_modules", "pkg"), { recursive: true });
+	await Bun.write(join(testSourceDir, "node_modules", "pkg", "index.js"), "console.log('ok')");
+
+	await FileService.symlinkFiles(["node_modules"], testSourceDir, testTargetDir);
+
+	const linkedPath = join(testTargetDir, "node_modules");
+	const stats = await lstat(linkedPath);
+	expect(stats.isSymbolicLink()).toBe(true);
+	expect(await Bun.file(join(linkedPath, "pkg", "index.js")).text()).toBe("console.log('ok')");
+});
+
 test("FileService - copyDirectory copies entire directory", async () => {
 	// Create source structure
 	await Bun.write(join(testSourceDir, "file1.txt"), "content1");

@@ -68,6 +68,16 @@ test("GitService - getWorktrees lists main worktree", async () => {
 	expect(worktrees[0]?.isMain).toBe(true);
 });
 
+test("GitService - getWorktrees keeps primary worktree marked as main even on feature branch", async () => {
+	await Bun.$`git -C ${testRepoDir} checkout -b feature-root`.quiet();
+
+	const worktrees = await GitService.getWorktrees(testRepoDir);
+
+	expect(worktrees).toHaveLength(1);
+	expect(worktrees[0]?.branch).toBe("feature-root");
+	expect(worktrees[0]?.isMain).toBe(true);
+});
+
 test("GitService - createWorktree creates new worktree", async () => {
 	const worktreePath = join(tmpdir(), "grove-test-worktree");
 	

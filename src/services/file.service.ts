@@ -73,10 +73,7 @@ export class FileService {
 
 	private static async createSymlink(source: string, target: string): Promise<void> {
 		try {
-			const sourceFile = Bun.file(source);
-			const exists = await sourceFile.exists();
-
-			if (!exists) {
+			if (!(await FileService.pathExists(source))) {
 				return;
 			}
 

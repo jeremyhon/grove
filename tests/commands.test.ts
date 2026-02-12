@@ -107,6 +107,50 @@ test("checkoutCommand - with -b creates a missing worktree", async () => {
 	expect(stdoutOutput.join("")).toContain(featurePath);
 });
 
+test("checkoutCommand - resolves from feature worktree when primary is not on main branch", async () => {
+	await setupCommand("checkout-target", { verbose: false });
+	await setupCommand("checkout-caller", { verbose: false });
+
+	// Ensure no worktree currently has the default branch checked out.
+	await Bun.$`git -C ${testRepo.path} checkout -b primary-feature`.quiet();
+
+	const callerPath = join(testRepo.path, "../grove-test-repo__worktrees/checkout-caller");
+	const targetPath = join(testRepo.path, "../grove-test-repo__worktrees/checkout-target");
+	const originalCwd = process.cwd();
+	stdoutOutput.length = 0;
+	process.chdir(callerPath);
+
+	try {
+		await checkoutCommand("checkout-target", { verbose: false });
+		expect(stdoutOutput.join("")).toContain(targetPath);
+	} finally {
+		process.chdir(originalCwd);
+	}
+});
+
+test("checkoutCommand - resolves existing worktree regardless of target casing", async () => {
+	const feature = "checkout-case-sensitive";
+	await setupCommand(feature, { verbose: false });
+
+	const featurePath = join(testRepo.path, `../grove-test-repo__worktrees/${feature}`);
+	stdoutOutput.length = 0;
+
+	await checkoutCommand(feature.toUpperCase(), { verbose: false });
+
+	expect(stdoutOutput.join("")).toContain(featurePath);
+});
+
+test("checkoutCommand - suggests -b when no matching worktree exists", async () => {
+	const feature = "missing-worktree";
+
+	try {
+		await checkoutCommand(feature, { verbose: false });
+		expect.unreachable();
+	} catch (error) {
+		expect((error as Error).message).toContain(`Use 'grove checkout -b ${feature}' to create it.`);
+	}
+});
+
 test("setupCommand - reuses an existing worktree", async () => {
 	const feature = "setup-existing";
 	const featurePath = join(testRepo.path, `../grove-test-repo__worktrees/${feature}`);
@@ -273,6 +317,9 @@ test("shellSetupCommand - writes bash completion and sources bash_profile", asyn
 		const scriptContent = await Bun.file(scriptPath).text();
 		expect(scriptContent).toContain("complete -F _grove_bash grove");
 		expect(scriptContent).toContain("doctor:Check Grove setup and environment");
+		expect(scriptContent).toContain("_grove_nocase_compgen");
+		expect(scriptContent).toContain("_describe -M 'm:{a-zA-Z}={A-Za-z}' 'commands' commands");
+		expect(scriptContent).toContain("compadd -M 'm:{a-zA-Z}={A-Za-z}' -- $branches");
 
 		const profileContent = await Bun.file(bashProfilePath).text();
 		expect(profileContent).toContain('source "$HOME/.grove/grove.sh"');

@@ -102,13 +102,19 @@ export class GitService {
 			const lines = output.split("\n").filter(line => line.trim());
 
 			let currentWorktree: Partial<WorktreeInfo> = {};
+			let isFirstWorktree = true;
 			
 			for (const line of lines) {
 				if (line.startsWith("worktree ")) {
 					if (currentWorktree.path) {
 						worktrees.push(currentWorktree as WorktreeInfo);
 					}
-					currentWorktree = { path: line.replace("worktree ", "") };
+					currentWorktree = {
+						path: line.replace("worktree ", ""),
+						// git worktree list returns the primary worktree first.
+						isMain: isFirstWorktree,
+					};
+					isFirstWorktree = false;
 				} else if (line.startsWith("HEAD ")) {
 					currentWorktree.head = line.replace("HEAD ", "");
 				} else if (line.startsWith("branch ")) {

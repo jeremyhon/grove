@@ -63,7 +63,7 @@ if type compdef >/dev/null 2>&1; then
     )
 
     if (( CURRENT == 2 )); then
-      _describe 'commands' commands
+      _describe -M 'm:{a-zA-Z}={A-Za-z}' 'commands' commands
       return
     fi
 
@@ -71,13 +71,13 @@ if type compdef >/dev/null 2>&1; then
       setup|s)
         local -a branches
         branches=(\${(f)"$(git for-each-ref --format='%(refname:short)' refs/heads refs/remotes/origin 2>/dev/null | sed 's#^origin/##' | sed '/^HEAD$/d' | sort -u)"})
-        compadd -- $branches
+        compadd -M 'm:{a-zA-Z}={A-Za-z}' -- $branches
         return
         ;;
       checkout|c|delete|d)
         local -a targets
         targets=(\${(f)"$(grove list --json 2>/dev/null | sed -n 's/.*\"path\": \"\\(.*\\)\",/\\1/p; s/.*\"branch\": \"\\(.*\\)\",/\\1/p')"})
-        compadd -- $targets
+        compadd -M 'm:{a-zA-Z}={A-Za-z}' -- $targets
         return
         ;;
     esac
@@ -85,13 +85,33 @@ if type compdef >/dev/null 2>&1; then
   compdef _grove grove
 elif type complete >/dev/null 2>&1; then
   # bash completion
+  _grove_nocase_compgen() {
+    local cur="$1"
+    shift
+    local cur_lower
+    cur_lower=$(printf '%s' "$cur" | tr '[:upper:]' '[:lower:]')
+
+    COMPREPLY=()
+    local candidate
+    for candidate in "$@"; do
+      local candidate_lower
+      candidate_lower=$(printf '%s' "$candidate" | tr '[:upper:]' '[:lower:]')
+      case "$candidate_lower" in
+        "$cur_lower"*)
+          COMPREPLY+=("$candidate")
+          ;;
+      esac
+    done
+  }
+
   _grove_bash() {
     local cur
     cur="\${COMP_WORDS[COMP_CWORD]}"
-    local commands="init i setup s checkout c list l delete d prune p doctor dr shell-setup ss migrate-workmux mw"
+    local -a command_list
+    command_list=(init i setup s checkout c list l delete d prune p doctor dr shell-setup ss migrate-workmux mw)
 
     if [ $COMP_CWORD -eq 1 ]; then
-      COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+      _grove_nocase_compgen "$cur" "\${command_list[@]}"
       return
     fi
 
@@ -99,13 +119,23 @@ elif type complete >/dev/null 2>&1; then
       setup|s)
         local branches
         branches=$(git for-each-ref --format='%(refname:short)' refs/heads refs/remotes/origin 2>/dev/null | sed 's#^origin/##' | sed '/^HEAD$/d' | sort -u)
-        COMPREPLY=( $(compgen -W "$branches" -- "$cur") )
+        local -a branch_list
+        local branch
+        while IFS= read -r branch; do
+          [ -n "$branch" ] && branch_list+=("$branch")
+        done <<< "$branches"
+        _grove_nocase_compgen "$cur" "\${branch_list[@]}"
         return
         ;;
       checkout|c|delete|d)
         local targets
         targets=$(grove list --json 2>/dev/null | sed -n 's/.*\"path\": \"\\(.*\\)\",/\\1/p; s/.*\"branch\": \"\\(.*\\)\",/\\1/p')
-        COMPREPLY=( $(compgen -W "$targets" -- "$cur") )
+        local -a target_list
+        local target
+        while IFS= read -r target; do
+          [ -n "$target" ] && target_list+=("$target")
+        done <<< "$targets"
+        _grove_nocase_compgen "$cur" "\${target_list[@]}"
         return
         ;;
     esac
