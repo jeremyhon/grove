@@ -1,7 +1,15 @@
+import { join } from "path";
 import type { ProjectConfig } from "../types.js";
 import type { LogService } from "./log.service.js";
 
 export class HookService {
+	private static readonly DEFAULT_INSTALL_HOOKS = new Set([
+		"bun install",
+		"npm install",
+		"pnpm install",
+		"yarn install",
+	]);
+
 	static async runHook(
 		hookName: keyof ProjectConfig["hooks"],
 		config: ProjectConfig,
@@ -18,6 +26,16 @@ export class HookService {
 			return;
 		}
 
+		const normalizedCommand = hookCommand.trim().replace(/\s+/g, " ");
+		const executionPath = context.worktreePath || context.projectPath;
+		if (hookName === "postSetup" && HookService.DEFAULT_INSTALL_HOOKS.has(normalizedCommand)) {
+			const hasPackageJson = await Bun.file(join(executionPath, "package.json")).exists();
+			if (!hasPackageJson) {
+				log?.verbose(`Skipping ${hookName} hook: no package.json in ${executionPath}`);
+				return;
+			}
+		}
+
 		const spinner = log?.spinner(`Running ${hookName} hook: ${hookCommand}`);
 		log?.verbose(`Executing ${hookName} hook: ${hookCommand}`);
 
@@ -32,7 +50,7 @@ export class HookService {
 		};
 
 		try {
-			const result = await Bun.$`sh -c "cd ${context.worktreePath || context.projectPath} && ${hookCommand}"`.env(env);
+			const result = await Bun.$`sh -c "cd ${executionPath} && ${hookCommand}"`.env(env);
 			if (result.exitCode !== 0) {
 				spinner?.fail();
 				throw new Error(`Hook '${hookName}' failed: ${result.stderr.toString()}`);
