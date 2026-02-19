@@ -66,6 +66,11 @@ export class ConfigService {
 		return "bun"; // Default to bun
 	}
 
+	static async hasPackageJson(projectPath: string = process.cwd()): Promise<boolean> {
+		const packageJsonPath = join(projectPath, "package.json");
+		return Bun.file(packageJsonPath).exists();
+	}
+
 	static generateProjectId(): string {
 		const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 		let result = "proj_";

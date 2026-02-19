@@ -22,6 +22,7 @@ export async function initCommand(options: CommandOptions): Promise<void> {
 	
 	// Auto-detect package manager
 	const packageManager = await ConfigService.detectPackageManager(projectPath);
+	const hasPackageJson = await ConfigService.hasPackageJson(projectPath);
 	
 	// Generate project configuration
 	const projectName = basename(projectPath);
@@ -33,9 +34,11 @@ export async function initCommand(options: CommandOptions): Promise<void> {
 		packageManager,
 		copyFiles: [".env*", ".vscode/"],
 		symlinkFiles: [],
-		hooks: {
-			postSetup: packageManager === "bun" ? "bun install" : `${packageManager} install`,
-		},
+		hooks: hasPackageJson
+			? {
+				postSetup: packageManager === "bun" ? "bun install" : `${packageManager} install`,
+			}
+			: {},
 	};
 	
 	// Write project config
