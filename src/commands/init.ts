@@ -16,7 +16,8 @@ export async function initCommand(options: CommandOptions): Promise<void> {
 	// Check if grove is already initialized
 	const existingConfig = await ConfigService.readProjectConfig(projectPath);
 	if (existingConfig) {
-		throw new Error("Grove is already initialized in this project.");
+		log.verbose("Grove is already initialized in this project. Skipping init.");
+		return;
 	}
 	
 	// Auto-detect package manager

@@ -57,16 +57,16 @@ afterAll(async () => {
 	await teardownTestRepo();
 });
 
-test("initCommand - initializes grove configuration", async () => {
-	// Test repo is already initialized, but we can test re-initialization
-	const options = { verbose: true };
-	
-	try {
-		await initCommand(options);
-		expect.unreachable();
-	} catch (error) {
-		expect((error as Error).message).toContain("Grove is already initialized");
-	}
+test("initCommand - no-ops when Grove is already initialized", async () => {
+	// Test repo is already initialized and should no-op
+	const { ConfigService } = await import("../src/services/config.service.js");
+	const initialConfig = await ConfigService.readProjectConfig(testRepo.path);
+	expect(initialConfig).not.toBeNull();
+
+	await initCommand({ verbose: false });
+
+	const configAfterNoop = await ConfigService.readProjectConfig(testRepo.path);
+	expect(configAfterNoop).toEqual(initialConfig);
 });
 
 test("setupCommand - creates worktree successfully", async () => {
