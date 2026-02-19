@@ -81,7 +81,10 @@ export async function setupCommand(feature: string, options: CommandOptions): Pr
 		// Clean up on failure
 		if (await FileService.pathExists(targetPath)) {
 			try {
-				await GitService.deleteWorktree(targetPath, configPath, log);
+				await GitService.deleteWorktree(targetPath, {
+					basePath: configPath,
+					log,
+				});
 			} catch {
 				// If git cleanup fails, try filesystem cleanup
 				await FileService.deleteDirectory(targetPath);

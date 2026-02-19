@@ -1,8 +1,8 @@
 import prompts from "prompts";
 import { resolve, sep } from "path";
+import { deleteWorktreeAndBranch } from "./delete-worktree.js";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
-import { HookService } from "../services/hook.service.js";
 import { FileService } from "../services/file.service.js";
 import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
@@ -157,31 +157,15 @@ export async function deleteCommand(path: string | undefined, options: CommandOp
 
 		log.verbose(`Deleting worktree at '${targetPath}'`);
 
-		// Run preDelete hook
-		await HookService.runHook("preDelete", config, {
-			projectPath: mainWorktree.path,
-			branch: currentBranch,
+		await deleteWorktreeAndBranch({
+			config,
+			mainWorktreePath: mainWorktree.path,
 			worktreePath: targetPath,
-		}, log);
-
-		// Delete the worktree
-		await GitService.deleteWorktree(targetPath, mainWorktree.path, log);
-
-		// Prune stale worktree metadata before deleting the branch
-		try {
-			await GitService.pruneWorktrees(mainWorktree.path);
-		} catch (error) {
-			log.warn(`Failed to prune worktrees: ${error}`);
-		}
-
-		// Delete the local branch (safe since it's merged)
-		await GitService.deleteLocalBranch(currentBranch, mainWorktree.path, log, force);
-
-		// Run postDelete hook
-		await HookService.runHook("postDelete", config, {
-			projectPath: mainWorktree.path,
-			branch: currentBranch,
-		}, log);
+			hookBranch: currentBranch,
+			localBranchToDelete: currentBranch,
+			force,
+			log,
+		});
 
 		if (shouldCdToMain) {
 			log.stdout(mainWorktree.path);

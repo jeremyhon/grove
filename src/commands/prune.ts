@@ -1,7 +1,7 @@
 import prompts from "prompts";
+import { deleteWorktreeAndBranch } from "./delete-worktree.js";
 import { ConfigService } from "../services/config.service.js";
 import { GitService } from "../services/git.service.js";
-import { HookService } from "../services/hook.service.js";
 import { createLogService } from "../services/log.service.js";
 import type { CommandOptions } from "../types.js";
 
@@ -104,28 +104,15 @@ export async function pruneCommand(options: CommandOptions & { force?: boolean; 
 			continue;
 		}
 
-		await HookService.runHook("preDelete", config, {
-			projectPath: mainWorktree.path,
-			branch,
+		await deleteWorktreeAndBranch({
+			config,
+			mainWorktreePath: mainWorktree.path,
 			worktreePath: worktree.path,
-		}, log);
-
-		await GitService.deleteWorktree(worktree.path, mainWorktree.path, log);
-
-		try {
-			await GitService.pruneWorktrees(mainWorktree.path);
-		} catch (error) {
-			log.warn(`Failed to prune worktrees: ${error}`);
-		}
-
-		if (worktree.branch) {
-			await GitService.deleteLocalBranch(worktree.branch, mainWorktree.path, log, force);
-		}
-
-		await HookService.runHook("postDelete", config, {
-			projectPath: mainWorktree.path,
-			branch,
-		}, log);
+			hookBranch: branch,
+			localBranchToDelete: worktree.branch || undefined,
+			force,
+			log,
+		});
 	}
 
 	log.success(`Pruned ${prunable.length} merged worktree${prunable.length === 1 ? "" : "s"}`);

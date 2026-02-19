@@ -273,6 +273,23 @@ test("deleteCommand - force bypasses merge check", async () => {
 	expect(branchCheck.exitCode).toBeGreaterThan(0);
 });
 
+test("deleteCommand - force deletes dirty worktree", async () => {
+	await setupCommand("force-delete-dirty", { verbose: false });
+
+	const featurePath = join(testRepo.path, "../grove-test-repo__worktrees/force-delete-dirty");
+	const { FileService } = await import("../src/services/file.service.js");
+	expect(await FileService.pathExists(featurePath)).toBe(true);
+
+	await Bun.write(join(featurePath, "untracked.txt"), "dirty");
+
+	await deleteCommand("force-delete-dirty", { verbose: false, force: true });
+
+	expect(await FileService.pathExists(featurePath)).toBe(false);
+
+	const branchCheck = await Bun.$`git -C ${testRepo.path} show-ref --verify --quiet refs/heads/force-delete-dirty`.quiet().nothrow();
+	expect(branchCheck.exitCode).toBeGreaterThan(0);
+});
+
 test("pruneCommand - removes merged worktrees", async () => {
 	await setupCommand("prune-merged-feature", { verbose: false });
 

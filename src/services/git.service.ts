@@ -1,6 +1,18 @@
 import type { WorktreeInfo } from "../types.js";
 import type { LogService } from "./log.service.js";
 
+interface DeleteWorktreeOptions {
+	basePath?: string;
+	log?: LogService;
+	force?: boolean;
+}
+
+interface DeleteLocalBranchOptions {
+	path?: string;
+	log?: LogService;
+	force?: boolean;
+}
+
 export class GitService {
 	private static formatShellError(error: unknown): string {
 		if (typeof error === "string") {
@@ -203,14 +215,16 @@ export class GitService {
 		}
 	}
 
-	static async deleteWorktree(path: string, basePath: string = process.cwd(), log?: LogService): Promise<void> {
+	static async deleteWorktree(path: string, options: DeleteWorktreeOptions = {}): Promise<void> {
+		const { basePath = process.cwd(), log, force = false } = options;
 		const spinner = log?.spinner(`Deleting worktree at ${path}`);
 		
 		try {
 			log?.verbose(`Removing worktree at ${path}`);
-			const result = await Bun.$`git -C ${basePath} worktree remove ${path}`.quiet().nothrow();
+			const result = force
+				? await Bun.$`git -C ${basePath} worktree remove -f ${path}`.quiet().nothrow()
+				: await Bun.$`git -C ${basePath} worktree remove ${path}`.quiet().nothrow();
 			if (result.exitCode !== 0) {
-				spinner?.fail();
 				const stderr = result.stderr.toString().trim();
 				const stdout = result.stdout.toString().trim();
 				const message = stderr || stdout || `exit code ${result.exitCode}`;
@@ -228,17 +242,15 @@ export class GitService {
 
 	static async deleteLocalBranch(
 		branch: string,
-		path: string = process.cwd(),
-		log?: LogService,
-		force: boolean = false,
+		options: DeleteLocalBranchOptions = {},
 	): Promise<void> {
+		const { path = process.cwd(), log, force = false } = options;
 		const spinner = log?.spinner(`Deleting local branch '${branch}'`);
 
 		try {
 			const flag = force ? "-D" : "-d";
 			const result = await Bun.$`git -C ${path} branch ${flag} ${branch}`.quiet().nothrow();
 			if (result.exitCode !== 0) {
-				spinner?.fail();
 				const stderr = result.stderr.toString().trim();
 				const stdout = result.stdout.toString().trim();
 				let message = stderr || stdout || `exit code ${result.exitCode}`;

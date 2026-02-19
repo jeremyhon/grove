@@ -107,7 +107,7 @@ test("GitService - deleteWorktree removes worktree", async () => {
 	expect(worktrees).toHaveLength(2);
 	
 	// Delete worktree
-	await GitService.deleteWorktree(worktreePath, testRepoDir);
+	await GitService.deleteWorktree(worktreePath, { basePath: testRepoDir });
 	
 	// Verify it's gone
 	worktrees = await GitService.getWorktrees(testRepoDir);
