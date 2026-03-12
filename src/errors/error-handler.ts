@@ -84,11 +84,12 @@ export class ErrorHandler {
 		const message = error.message.toLowerCase();
 		
 		// Git-related errors
-		if (message.includes("git") || message.includes("repository")) {
+		const gitOperation = this.inferGitOperation(error.message);
+		if (message.includes("git") || message.includes("repository") || gitOperation) {
 			if (message.includes("not a git repository")) {
 				return UserError.notGitRepository();
 			}
-			return SystemError.gitOperationFailed("unknown git operation", error.message, error);
+			return SystemError.gitOperationFailed(gitOperation ?? "unknown git operation", error.message, error);
 		}
 		
 		// File system errors
@@ -115,8 +116,59 @@ export class ErrorHandler {
 			});
 		}
 		
-		// Default to system error for unknown Error objects
-		return SystemError.fileOperationFailed("unknown operation", "unknown path", error);
+		// Preserve original details for unknown errors instead of replacing them
+		return new GroveError({
+			code: GroveErrorCode.UNKNOWN,
+			message: error.message,
+			cause: error,
+			exitCode: 2,
+		});
+	}
+
+	private inferGitOperation(message: string): string | undefined {
+		const lowered = message.toLowerCase();
+
+		if (lowered.includes("failed to delete worktree")) {
+			return "delete worktree";
+		}
+
+		if (lowered.includes("failed to create worktree")) {
+			return "create worktree";
+		}
+
+		if (lowered.includes("failed to delete local branch")) {
+			return "delete local branch";
+		}
+
+		if (lowered.includes("failed to fetch")) {
+			return "fetch";
+		}
+
+		if (lowered.includes("failed to prune worktrees")) {
+			return "prune worktrees";
+		}
+
+		if (lowered.includes("failed to get current branch")) {
+			return "get current branch";
+		}
+
+		if (lowered.includes("failed to get repo root")) {
+			return "get repo root";
+		}
+
+		if (lowered.includes("failed to get worktrees")) {
+			return "get worktrees";
+		}
+
+		if (lowered.includes("failed to determine main branch")) {
+			return "determine main branch";
+		}
+
+		if (lowered.includes("failed to check merge status")) {
+			return "check merge status";
+		}
+
+		return undefined;
 	}
 }
 
